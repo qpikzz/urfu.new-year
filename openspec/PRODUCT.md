@@ -21,7 +21,7 @@ Every participant chooses one status:
 | University employee | Employee of any university (teachers, dean's office, etc.) |
 | Other | Anyone else |
 
-- The institute is collected for students and for university employees.
+- The institute is collected only for UrFU students and university employees.
 - Institute-level greetings (see section 8) apply to UrFU students only.
 - Stricter automatic moderation applies to the statuses Applicant, Other university student and Other. It matters mainly for later development stages and has little effect on the MVP.
 
@@ -51,7 +51,7 @@ Every participant chooses one status:
 - The bot sends the circle to the administrators' chat with the buttons ✅ and ❌.
 - Administrators are defined by their ids in the environment configuration.
 - ✅ approves the circle manually.
-- ❌ offers four options: "Cancel, accept", "Contains profanity", "Contains shocking content", "Other reason".
+- ❌ offers five options: "Cancel, accept", "Contains profanity", "Contains shocking content", "Advertising", "Other reason".
 
 ### 4.3. Circle states
 
@@ -59,7 +59,7 @@ Every participant chooses one status:
 - 1: approved automatically.
 - 2: approved manually.
 
-Rejected circles are tracked separately in the data spec.
+- 3: rejected.
 
 ## 5. Limits and ban
 
@@ -73,8 +73,10 @@ Rejected circles are tracked separately in the data spec.
 
 - Registration opens automatically when the bot is launched.
 - Closing starts at 00:00 Yekaterinburg time on 25 December 2026. From then on, new circles cannot be sent.
+- Only the sending of new circles closes; registration stays open.
 - After closing, administrators finish moderating the remaining circles.
-- The number of approved circles must be a multiple of 3. Surplus circles that remain are rejected with the reason "Other reason". The rule for selecting the surplus is defined in the flows spec.
+- The number of approved circles must be a multiple of 3. After closing, approvals go through an approval buffer, and surplus circles that remain are rejected with the reason "Other reason" (FLOWS 10).
+- Intake can also be closed manually (the `/close` command or an environment flag) and is closed automatically under critical load (FLOWS 9).
 
 ## 7. Triples
 
