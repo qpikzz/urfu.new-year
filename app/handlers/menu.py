@@ -1,0 +1,5 @@
+"""Handler for /menu."""
+
+from aiogram import Router
+
+router = Router(name="menu")
