@@ -56,3 +56,6 @@ Thumbs.db
 
 # Specs are kept locally and are not published
 openspec/
+
+# Security
+security/HID.py

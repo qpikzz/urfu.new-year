@@ -22,10 +22,19 @@ COMMAND_HANDLERS = {
 }
 
 
-def test_run_entry_point_returns_success() -> None:
+def test_run_entry_point_returns_success(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("BOT_TOKEN", "123456:fake")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
     from run import main
 
     assert main() == 0
+
+    log_file = tmp_path / "logs.txt"
+    assert log_file.exists()
+    content = log_file.read_text(encoding="utf-8")
+    assert "Application started" in content
+    assert "123456:fake" not in content
 
 
 def test_handler_files_match_commands() -> None:
