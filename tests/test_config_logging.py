@@ -18,6 +18,7 @@ from app.logging_setup import (
 FAKE_TOKEN = "123456:fake_token"
 FAKE_DATABASE_URL = "postgresql+asyncpg://user:password@localhost/db"
 FAKE_GROQ_KEY = "gsk_fake_key"
+FAKE_CRYPT_KEYS = "0123456789,abcdefghij"
 ENV_NAMES = (
     "BOT_TOKEN",
     "ADMIN_CHAT_ID",
@@ -29,6 +30,7 @@ ENV_NAMES = (
     "INTAKE_CLOSED",
     "DATABASE_URL",
     "GROQ_API_KEY",
+    "CRYPT_KEY",
 )
 
 
@@ -44,6 +46,7 @@ def full_environment() -> dict[str, str]:
         "INTAKE_CLOSED": "true",
         "DATABASE_URL": FAKE_DATABASE_URL,
         "GROQ_API_KEY": FAKE_GROQ_KEY,
+        "CRYPT_KEY": FAKE_CRYPT_KEYS,
     }
 
 
@@ -65,6 +68,7 @@ def test_config_parses_full_environment() -> None:
     assert config.intake_closed is True
     assert config.database_url == FAKE_DATABASE_URL
     assert config.groq_api_key == FAKE_GROQ_KEY
+    assert config.crypt_keys == ("0123456789", "abcdefghij")
 
 
 def test_config_uses_safe_defaults_for_optional_values() -> None:
@@ -79,6 +83,7 @@ def test_config_uses_safe_defaults_for_optional_values() -> None:
     assert config.intake_closed is False
     assert config.database_url is None
     assert config.groq_api_key is None
+    assert config.crypt_keys == ()
     assert config.log_file.name == "logs.txt"
 
 
@@ -141,6 +146,25 @@ def test_config_never_exposes_secrets_in_repr() -> None:
     assert FAKE_TOKEN not in representation
     assert FAKE_DATABASE_URL not in representation
     assert FAKE_GROQ_KEY not in representation
+    for crypt_key in config.crypt_keys:
+        assert crypt_key not in representation
+
+
+def test_config_reports_crypt_key_count_only() -> None:
+    config = Config.from_mapping(full_environment())
+
+    summary = config.public_summary()
+
+    assert summary["crypt_keys"] == 2
+    assert FAKE_CRYPT_KEYS not in str(summary)
+
+
+def test_config_parses_crypt_keys_by_commas() -> None:
+    config = Config.from_mapping(
+        {"BOT_TOKEN": FAKE_TOKEN, "CRYPT_KEY": " 0123456789 , abcdefghij "}
+    )
+
+    assert config.crypt_keys == ("0123456789", "abcdefghij")
 
 
 def test_config_secrets_skip_empty_optional_values() -> None:

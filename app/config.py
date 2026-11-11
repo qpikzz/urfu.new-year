@@ -62,6 +62,13 @@ def _parse_list(values: Mapping[str, str], name: str) -> tuple[str, ...]:
     return tuple(item for item in _LIST_SEPARATOR.split(value) if item)
 
 
+def _parse_crypt_keys(values: Mapping[str, str]) -> tuple[str, ...]:
+    value = _optional(values, "CRYPT_KEY")
+    if value is None:
+        return ()
+    return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
 def _parse_bot_token(values: Mapping[str, str]) -> str:
     token = _required(values, "BOT_TOKEN")
     if _BOT_TOKEN_PATTERN.fullmatch(token) is None:
@@ -97,6 +104,7 @@ class Config:
     intake_closed: bool = False
     database_url: str | None = field(default=None, repr=False)
     groq_api_key: str | None = field(default=None, repr=False)
+    crypt_keys: tuple[str, ...] = field(default=(), repr=False)
     log_file: Path = field(default_factory=default_log_path, repr=False)
 
     @classmethod
@@ -113,10 +121,15 @@ class Config:
             intake_closed=_parse_bool(values, "INTAKE_CLOSED"),
             database_url=_optional(values, "DATABASE_URL"),
             groq_api_key=_optional(values, "GROQ_API_KEY"),
+            crypt_keys=_parse_crypt_keys(values),
         )
 
     def secrets(self) -> tuple[str, ...]:
-        """Return values that must never appear in logs."""
+        """Return values that must never appear in logs.
+
+        HID alphabets are deliberately excluded: an alphabet may consist of
+        common characters and would corrupt unrelated log records.
+        """
         values = (
             self.bot_token,
             self.database_url,
@@ -134,6 +147,7 @@ class Config:
             "admin_chat_configured": self.admin_chat_id is not None,
             "admin_hids": len(self.admin_hids),
             "institutes": len(self.institutes),
+            "crypt_keys": len(self.crypt_keys),
             "intake_closed": self.intake_closed,
         }
 
