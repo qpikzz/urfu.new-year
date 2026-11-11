@@ -1,1 +1,43 @@
-"""Keyboard builders."""
+"""Inline keyboard builders."""
+
+from app.keyboards.keyboards import (
+    CAPTCHA_BUTTON_COUNT,
+    CAPTCHA_CALLBACK_PREFIX,
+    CONSENT_ACCEPT_CALLBACK,
+    INSTITUTE_CALLBACK_PREFIX,
+    MODERATION_APPROVE_CALLBACK,
+    MODERATION_CANCEL_CALLBACK,
+    MODERATION_REJECT_CALLBACK,
+    MODERATION_REJECT_CALLBACK_PREFIX,
+    STATUS_CALLBACK_PREFIX,
+    captcha_keyboard,
+    consent_keyboard,
+    institute_callback_data,
+    institutes_keyboard,
+    moderation_keyboard,
+    rejection_callback_data,
+    rejection_reasons_keyboard,
+    status_callback_data,
+    status_keyboard,
+)
+
+__all__ = [
+    "CAPTCHA_BUTTON_COUNT",
+    "CAPTCHA_CALLBACK_PREFIX",
+    "CONSENT_ACCEPT_CALLBACK",
+    "INSTITUTE_CALLBACK_PREFIX",
+    "MODERATION_APPROVE_CALLBACK",
+    "MODERATION_CANCEL_CALLBACK",
+    "MODERATION_REJECT_CALLBACK",
+    "MODERATION_REJECT_CALLBACK_PREFIX",
+    "STATUS_CALLBACK_PREFIX",
+    "captcha_keyboard",
+    "consent_keyboard",
+    "institute_callback_data",
+    "institutes_keyboard",
+    "moderation_keyboard",
+    "rejection_callback_data",
+    "rejection_reasons_keyboard",
+    "status_callback_data",
+    "status_keyboard",
+]
