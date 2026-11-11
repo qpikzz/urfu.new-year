@@ -3,24 +3,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-import pytest_asyncio
-from sqlalchemy import text
-from sqlalchemy.dialects import sqlite
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-from sqlalchemy.schema import CreateTable
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import Base
 from app.db.enums import (
     CircleStatus,
     ParticipantStatus,
     RejectedBy,
     RejectionReason,
 )
-from app.db.models import Circle, Setting, User
 from app.db.requests import (
     Statistics,
     approve_circle,
@@ -50,33 +40,6 @@ from app.db.requests import (
 )
 
 pytestmark = pytest.mark.asyncio
-
-
-def _create_circle_table(sync_connection) -> None:
-    ddl = str(CreateTable(Circle.__table__).compile(dialect=sqlite.dialect()))
-    # SQLite has no identity columns; INTEGER PRIMARY KEY autoincrements.
-    ddl = ddl.replace("id BIGINT NOT NULL", "id INTEGER NOT NULL")
-    sync_connection.execute(text(ddl))
-
-
-@pytest_asyncio.fixture
-async def session() -> AsyncSession:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-
-    async with engine.begin() as connection:
-        await connection.run_sync(
-            lambda sync_connection: Base.metadata.create_all(
-                sync_connection,
-                tables=[User.__table__, Setting.__table__],
-            )
-        )
-        await connection.run_sync(_create_circle_table)
-
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with factory() as db_session:
-        yield db_session
-
-    await engine.dispose()
 
 
 class FakeMailingSession:
