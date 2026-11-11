@@ -62,7 +62,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "timezone BETWEEN -12 AND 14",
-            name="ck_users_timezone_range",
+            name="timezone_range",
         ),
         sa.CheckConstraint(
             "status IN ("
@@ -73,7 +73,7 @@ def upgrade() -> None:
             "'university_employee', "
             "'other'"
             ")",
-            name="ck_users_participant_status",
+            name="participant_status",
         ),
         sa.PrimaryKeyConstraint("hid", name="pk_users"),
     )
@@ -101,7 +101,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "status IN (0, 1, 2, 3)",
-            name="ck_circles_status_valid",
+            name="status_valid",
         ),
         sa.CheckConstraint(
             "rejection_reason IN ("
@@ -110,11 +110,11 @@ def upgrade() -> None:
             "'advertising', "
             "'other'"
             ")",
-            name="ck_circles_rejection_reason",
+            name="rejection_reason",
         ),
         sa.CheckConstraint(
             "rejected_by IN ('auto', 'manual')",
-            name="ck_circles_rejected_by",
+            name="rejected_by",
         ),
         sa.ForeignKeyConstraint(
             ["owner_hid"],
