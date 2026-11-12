@@ -28,8 +28,9 @@ def create_session_factory(
 
 def create_dispatcher(
     session_factory: async_sessionmaker[AsyncSession],
+    config: Config | None = None,
 ) -> Dispatcher:
-    dispatcher = Dispatcher(storage=MemoryStorage())
+    dispatcher = Dispatcher(storage=MemoryStorage(), config=config)
     database_middleware = DatabaseMiddleware(session_factory)
     dispatcher.message.middleware(database_middleware)
     dispatcher.callback_query.middleware(database_middleware)
@@ -43,7 +44,7 @@ async def run_bot(config: Config) -> None:
 
     engine = create_engine(config.database_url)
     session_factory = create_session_factory(engine)
-    dispatcher = create_dispatcher(session_factory)
+    dispatcher = create_dispatcher(session_factory, config)
     bot = Bot(token=config.bot_token)
     try:
         await dispatcher.start_polling(bot)

@@ -10,6 +10,7 @@ from app.content import texts
 from app.db.enums import ParticipantStatus, RejectionReason
 
 CAPTCHA_CALLBACK_PREFIX = "captcha:"
+CONSENT_CONTINUE_CALLBACK = "consent:continue"
 CONSENT_ACCEPT_CALLBACK = "consent:accept"
 STATUS_CALLBACK_PREFIX = "status:"
 INSTITUTE_CALLBACK_PREFIX = "institute:"
@@ -61,6 +62,12 @@ def captcha_keyboard(emojis: Sequence[str]) -> InlineKeyboardMarkup:
                 for emoji in options
             ]
         ]
+    )
+
+
+def consent_continue_keyboard() -> InlineKeyboardMarkup:
+    return _single_column(
+        [(texts.CONSENT_CONTINUE_BUTTON, CONSENT_CONTINUE_CALLBACK)]
     )
 
 

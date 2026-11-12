@@ -183,6 +183,8 @@ CAPTCHA_FAILED = TEXTS["captcha.failed"]
 CAPTCHA_PASSED = TEXTS["captcha.passed"]
 CONSENT_TEXT = TEXTS["consent.text"]
 CONSENT_BUTTON = TEXTS["consent.button"]
+# Author-approved addition: continue button between captcha and consent.
+CONSENT_CONTINUE_BUTTON = "Продолжить"
 STATUS_QUESTION = TEXTS["status.question"]
 INSTITUTE_QUESTION = TEXTS["institute.question"]
 TIMEZONE_QUESTION = TEXTS["timezone.question"]
@@ -555,6 +557,7 @@ __all__ = [
     "CLOSE_ON",
     "COMMAND_DESCRIPTIONS",
     "CONSENT_BUTTON",
+    "CONSENT_CONTINUE_BUTTON",
     "CONSENT_TEXT",
     "EMOJI_TOKENS",
     "INSTITUTE_QUESTION",

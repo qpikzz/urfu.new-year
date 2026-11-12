@@ -15,7 +15,10 @@ from app.content.texts import (
 )
 from app.db.requests import create_user, set_user_banned
 from app.handlers import start
-from app.keyboards import CAPTCHA_CALLBACK_PREFIX
+from app.keyboards import (
+    CAPTCHA_CALLBACK_PREFIX,
+    CONSENT_CONTINUE_CALLBACK,
+)
 from app.services import (
     CAPTCHA_CORRECT_KEY,
     CAPTCHA_KINDS,
@@ -246,10 +249,11 @@ async def test_correct_answer_passes_captcha(
     assert state.data[REGISTRATION_STEP_KEY] == RegistrationStep.CONSENT.value
     assert state.data[CAPTCHA_WRONG_ATTEMPTS_KEY] == 0
     callback.answer.assert_awaited_once_with()
-    callback.message.edit_text.assert_awaited_once_with(
-        CAPTCHA_PASSED,
-        reply_markup=None,
-    )
+    args, kwargs = callback.message.edit_text.await_args
+    assert args[0] == CAPTCHA_PASSED
+    assert keyboard_rows(kwargs["reply_markup"]) == [
+        [(texts.CONSENT_CONTINUE_BUTTON, CONSENT_CONTINUE_CALLBACK)]
+    ]
 
 
 @pytest.mark.asyncio

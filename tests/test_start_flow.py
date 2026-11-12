@@ -503,10 +503,15 @@ async def test_database_middleware_rolls_back_on_error() -> None:
     assert session.closed
 
 
-def test_dispatcher_includes_start_router() -> None:
-    dispatcher = create_dispatcher(FakeSessionFactory())  # type: ignore[arg-type]
+def test_dispatcher_includes_start_router_and_config() -> None:
+    config = Config(bot_token="123456:fake", privacy_url="https://privacy")
+    dispatcher = create_dispatcher(  # type: ignore[arg-type]
+        FakeSessionFactory(),
+        config,
+    )
 
     assert start.router in dispatcher.sub_routers
+    assert dispatcher.get("config") is config
 
 
 @pytest.mark.asyncio

@@ -8,10 +8,12 @@ from app.db.enums import ParticipantStatus, RejectionReason
 from app.keyboards import (
     CAPTCHA_CALLBACK_PREFIX,
     CONSENT_ACCEPT_CALLBACK,
+    CONSENT_CONTINUE_CALLBACK,
     MODERATION_APPROVE_CALLBACK,
     MODERATION_CANCEL_CALLBACK,
     MODERATION_REJECT_CALLBACK,
     captcha_keyboard,
+    consent_continue_keyboard,
     consent_keyboard,
     institutes_keyboard,
     moderation_keyboard,
@@ -51,6 +53,14 @@ def test_captcha_keyboard_uses_four_emoji_buttons() -> None:
 def test_captcha_keyboard_rejects_invalid_options(emojis) -> None:
     with pytest.raises(ValueError):
         captcha_keyboard(emojis)
+
+
+def test_consent_continue_keyboard_has_continue_button() -> None:
+    rows = _rows(consent_continue_keyboard())
+
+    assert rows == [
+        [(texts.CONSENT_CONTINUE_BUTTON, CONSENT_CONTINUE_CALLBACK)]
+    ]
 
 
 def test_consent_keyboard_has_accept_button() -> None:
@@ -135,6 +145,7 @@ def test_rejection_reasons_keyboard_has_all_options_in_order() -> None:
     "keyboard",
     [
         captcha_keyboard(["❤️", "⚡", "🦴", "👁"]),
+        consent_continue_keyboard(),
         consent_keyboard(),
         status_keyboard(),
         institutes_keyboard(["ИРИТ-РТФ", "ИнЭУ", "ГУК"]),

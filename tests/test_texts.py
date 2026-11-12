@@ -270,6 +270,10 @@ def test_registration_formatters() -> None:
     )
 
 
+def test_consent_continue_button_matches_author_decision() -> None:
+    assert texts.CONSENT_CONTINUE_BUTTON == "Продолжить"
+
+
 def test_circle_and_intake_formatters() -> None:
     assert texts.format_intake_closed(
         channel_url="https://channel.example"

@@ -1,4 +1,4 @@
-"""Handler for /start and the registration captcha."""
+"""Handler for /start, the registration captcha and consent."""
 
 from __future__ import annotations
 
@@ -10,21 +10,31 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import Config
 from app.content.texts import (
     CAPTCHA_FAILED,
     CAPTCHA_PASSED,
     START_WELCOME,
     format_captcha_wrong,
+    format_consent_text,
 )
 from app.db.requests import (
     create_user,
     get_circle,
     get_user,
+    mark_user_registered,
     set_user_banned,
     update_user_identity,
 )
 from app.hid import HIDError, telegram_id_to_hid
-from app.keyboards import CAPTCHA_CALLBACK_PREFIX, captcha_keyboard
+from app.keyboards import (
+    CAPTCHA_CALLBACK_PREFIX,
+    CONSENT_ACCEPT_CALLBACK,
+    CONSENT_CONTINUE_CALLBACK,
+    captcha_keyboard,
+    consent_continue_keyboard,
+    consent_keyboard,
+)
 from app.services import (
     CAPTCHA_CORRECT_KEY,
     CAPTCHA_KIND_KEY,
@@ -32,6 +42,7 @@ from app.services import (
     CAPTCHA_OPTIONS_KEY,
     CAPTCHA_PASSED_KEY,
     CAPTCHA_WRONG_ATTEMPTS_KEY,
+    CONSENT_ACCEPTED_KEY,
     REGISTRATION_STEP_KEY,
     RegistrationStep,
     build_menu_text,
@@ -79,11 +90,29 @@ async def _mark_captcha_passed(state: FSMContext) -> None:
     )
 
 
+def _consent_text(config: Config | None) -> str:
+    return format_consent_text(
+        privacy_url=config.privacy_url if config and config.privacy_url else "",
+        terms_url=config.terms_url if config and config.terms_url else "",
+    )
+
+
+async def _send_consent_question(
+    message: Message,
+    config: Config | None,
+) -> None:
+    await message.answer(
+        _consent_text(config),
+        reply_markup=consent_keyboard(),
+    )
+
+
 @router.message(CommandStart())
 async def handle_start(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
+    config: Config | None = None,
 ) -> None:
     telegram_user = message.from_user
     if telegram_user is None:
@@ -128,6 +157,8 @@ async def handle_start(
         await message.answer(START_WELCOME)
     if step == RegistrationStep.CAPTCHA:
         await _send_captcha_question(message, state)
+    elif step == RegistrationStep.CONSENT:
+        await _send_consent_question(message, config)
     logger.info("Start flow: hid=%s step=%s", user.hid, step.value)
 
 
@@ -163,7 +194,10 @@ async def handle_captcha_answer(
     if answer == challenge.correct:
         await _mark_captcha_passed(state)
         await callback.answer()
-        await callback.message.edit_text(CAPTCHA_PASSED, reply_markup=None)
+        await callback.message.edit_text(
+            CAPTCHA_PASSED,
+            reply_markup=consent_continue_keyboard(),
+        )
         logger.info("Captcha passed: hid=%s", user.hid)
         return
 
@@ -192,3 +226,73 @@ async def handle_captcha_answer(
         user.hid,
         attempts,
     )
+
+
+@router.callback_query(F.data == CONSENT_CONTINUE_CALLBACK)
+async def handle_consent_continue(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+    config: Config | None = None,
+) -> None:
+    telegram_user = callback.from_user
+    if telegram_user is None or callback.message is None:
+        return
+
+    try:
+        hid = telegram_id_to_hid(telegram_user.id)
+    except HIDError:
+        logger.error("Consent aborted: HID encoding failed")
+        return
+
+    user = await get_user(session, hid)
+    if user is None or user.is_banned:
+        return
+
+    data = await state.get_data()
+    if data.get(REGISTRATION_STEP_KEY) != RegistrationStep.CONSENT.value:
+        return
+
+    await callback.answer()
+    await callback.message.edit_text(
+        _consent_text(config),
+        reply_markup=consent_keyboard(),
+    )
+    logger.info("Consent shown: hid=%s", user.hid)
+
+
+@router.callback_query(F.data == CONSENT_ACCEPT_CALLBACK)
+async def handle_consent_accept(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
+    telegram_user = callback.from_user
+    if telegram_user is None or callback.message is None:
+        return
+
+    try:
+        hid = telegram_id_to_hid(telegram_user.id)
+    except HIDError:
+        logger.error("Consent aborted: HID encoding failed")
+        return
+
+    user = await get_user(session, hid)
+    if user is None or user.is_banned:
+        return
+
+    data = await state.get_data()
+    if data.get(REGISTRATION_STEP_KEY) != RegistrationStep.CONSENT.value:
+        return
+
+    if user.registered_at is None:
+        await mark_user_registered(session, user)
+    await state.update_data(
+        {
+            CONSENT_ACCEPTED_KEY: True,
+            REGISTRATION_STEP_KEY: RegistrationStep.STATUS.value,
+        }
+    )
+    await callback.answer()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    logger.info("Consent accepted: hid=%s", user.hid)

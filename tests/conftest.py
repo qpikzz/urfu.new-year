@@ -89,6 +89,7 @@ def make_message(
         message.answer = AsyncMock()
         message.reply = AsyncMock()
         message.edit_text = AsyncMock()
+        message.edit_reply_markup = AsyncMock()
         return message
 
     return factory
