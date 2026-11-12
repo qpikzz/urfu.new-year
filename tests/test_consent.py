@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Config
 from app.content import texts
+from app.db.enums import ParticipantStatus
 from app.db.requests import (
     create_user,
     get_user,
@@ -203,6 +204,18 @@ async def test_accept_consent_marks_registered_and_moves_to_status(
     callback.message.edit_reply_markup.assert_awaited_once_with(
         reply_markup=None
     )
+    callback.message.answer.assert_awaited_once()
+    args, kwargs = callback.message.answer.await_args
+    assert args[0] == texts.STATUS_QUESTION
+    assert keyboard_rows(kwargs["reply_markup"]) == [
+        [
+            (
+                texts.PARTICIPANT_STATUS_LABELS[status],
+                f"status:{status.value}",
+            )
+        ]
+        for status in ParticipantStatus
+    ]
 
 
 @pytest.mark.asyncio

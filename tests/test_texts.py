@@ -184,13 +184,13 @@ def test_validator_rejects_two_emojis_in_a_line() -> None:
         texts.validate_text_formatting("❗❗ Текст")
 
 
-def test_participant_status_labels_match_spec() -> None:
+def test_participant_status_labels_match_decision() -> None:
     assert texts.PARTICIPANT_STATUS_LABELS == {
         ParticipantStatus.APPLICANT: "Абитуриент (школьник)",
         ParticipantStatus.URFU_STUDENT: "Студент УрФУ",
         ParticipantStatus.OTHER_UNIVERSITY_STUDENT: "Студент другого вуза",
         ParticipantStatus.STUDENT_PARENT: "Родитель студента",
-        ParticipantStatus.UNIVERSITY_EMPLOYEE: "Работник вуза",
+        ParticipantStatus.UNIVERSITY_EMPLOYEE: "Работники и преподаватели УрФУ",
         ParticipantStatus.OTHER: "Прочее",
     }
 

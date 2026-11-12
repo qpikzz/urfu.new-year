@@ -247,7 +247,7 @@ PARTICIPANT_STATUS_LABELS = {
     ParticipantStatus.URFU_STUDENT: "Студент УрФУ",
     ParticipantStatus.OTHER_UNIVERSITY_STUDENT: "Студент другого вуза",
     ParticipantStatus.STUDENT_PARENT: "Родитель студента",
-    ParticipantStatus.UNIVERSITY_EMPLOYEE: "Работник вуза",
+    ParticipantStatus.UNIVERSITY_EMPLOYEE: "Работники и преподаватели УрФУ",
     ParticipantStatus.OTHER: "Прочее",
 }
 

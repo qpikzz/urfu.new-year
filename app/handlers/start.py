@@ -1,4 +1,4 @@
-"""Handler for /start, the registration captcha and consent."""
+"""Handler for /start and the registration steps."""
 
 from __future__ import annotations
 
@@ -14,7 +14,13 @@ from app.config import Config
 from app.content.texts import (
     CAPTCHA_FAILED,
     CAPTCHA_PASSED,
+    CIRCLE_ASK,
+    INSTITUTE_QUESTION,
+    REGISTRATION_DONE,
     START_WELCOME,
+    STATUS_QUESTION,
+    TIMEZONE_INVALID,
+    TIMEZONE_QUESTION,
     format_captcha_wrong,
     format_consent_text,
 )
@@ -24,6 +30,9 @@ from app.db.requests import (
     get_user,
     mark_user_registered,
     set_user_banned,
+    set_user_institute,
+    set_user_status,
+    set_user_timezone,
     update_user_identity,
 )
 from app.hid import HIDError, telegram_id_to_hid
@@ -31,9 +40,13 @@ from app.keyboards import (
     CAPTCHA_CALLBACK_PREFIX,
     CONSENT_ACCEPT_CALLBACK,
     CONSENT_CONTINUE_CALLBACK,
+    INSTITUTE_CALLBACK_PREFIX,
+    STATUS_CALLBACK_PREFIX,
     captcha_keyboard,
     consent_continue_keyboard,
     consent_keyboard,
+    institutes_keyboard,
+    status_keyboard,
 )
 from app.services import (
     CAPTCHA_CORRECT_KEY,
@@ -43,13 +56,18 @@ from app.services import (
     CAPTCHA_PASSED_KEY,
     CAPTCHA_WRONG_ATTEMPTS_KEY,
     CONSENT_ACCEPTED_KEY,
+    INSTITUTE_REQUIRED_STATUSES,
     REGISTRATION_STEP_KEY,
     RegistrationStep,
     build_menu_text,
     captcha_attempts_left,
     challenge_from_state,
     create_captcha_challenge,
+    institute_options,
     is_registration_complete,
+    parse_institute,
+    parse_status,
+    parse_timezone,
     resume_registration,
     wrong_attempts_from_state,
 )
@@ -107,6 +125,36 @@ async def _send_consent_question(
     )
 
 
+def _institute_options(config: Config | None) -> tuple[str, ...]:
+    return institute_options(config.institutes if config else ())
+
+
+async def _send_status_question(message: Message) -> None:
+    await message.answer(
+        STATUS_QUESTION,
+        reply_markup=status_keyboard(),
+    )
+
+
+async def _send_institute_question(
+    message: Message,
+    config: Config | None,
+) -> None:
+    await message.answer(
+        INSTITUTE_QUESTION,
+        reply_markup=institutes_keyboard(_institute_options(config)),
+    )
+
+
+async def _send_timezone_question(message: Message) -> None:
+    await message.answer(TIMEZONE_QUESTION)
+
+
+async def _send_registration_complete(message: Message) -> None:
+    await message.answer(REGISTRATION_DONE)
+    await message.answer(CIRCLE_ASK)
+
+
 @router.message(CommandStart())
 async def handle_start(
     message: Message,
@@ -159,6 +207,12 @@ async def handle_start(
         await _send_captcha_question(message, state)
     elif step == RegistrationStep.CONSENT:
         await _send_consent_question(message, config)
+    elif step == RegistrationStep.STATUS:
+        await _send_status_question(message)
+    elif step == RegistrationStep.INSTITUTE:
+        await _send_institute_question(message, config)
+    elif step == RegistrationStep.TIMEZONE:
+        await _send_timezone_question(message)
     logger.info("Start flow: hid=%s step=%s", user.hid, step.value)
 
 
@@ -295,4 +349,145 @@ async def handle_consent_accept(
     )
     await callback.answer()
     await callback.message.edit_reply_markup(reply_markup=None)
+    await _send_status_question(callback.message)
     logger.info("Consent accepted: hid=%s", user.hid)
+
+
+@router.callback_query(F.data.startswith(STATUS_CALLBACK_PREFIX))
+async def handle_status_choice(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+    config: Config | None = None,
+) -> None:
+    telegram_user = callback.from_user
+    if telegram_user is None or callback.message is None:
+        return
+
+    try:
+        hid = telegram_id_to_hid(telegram_user.id)
+    except HIDError:
+        logger.error("Profile status aborted: HID encoding failed")
+        return
+
+    user = await get_user(session, hid)
+    if user is None or user.is_banned:
+        return
+
+    data = await state.get_data()
+    if data.get(REGISTRATION_STEP_KEY) != RegistrationStep.STATUS.value:
+        return
+
+    status = parse_status(
+        (callback.data or "").removeprefix(STATUS_CALLBACK_PREFIX)
+    )
+    if status is None:
+        return
+
+    await set_user_status(session, user, status)
+    await callback.answer()
+    if status in INSTITUTE_REQUIRED_STATUSES:
+        await state.update_data(
+            {REGISTRATION_STEP_KEY: RegistrationStep.INSTITUTE.value}
+        )
+        await callback.message.edit_text(
+            INSTITUTE_QUESTION,
+            reply_markup=institutes_keyboard(_institute_options(config)),
+        )
+    else:
+        await state.update_data(
+            {REGISTRATION_STEP_KEY: RegistrationStep.TIMEZONE.value}
+        )
+        await callback.message.edit_text(
+            TIMEZONE_QUESTION,
+            reply_markup=None,
+        )
+    logger.info("Profile status selected: hid=%s", user.hid)
+
+
+@router.callback_query(F.data.startswith(INSTITUTE_CALLBACK_PREFIX))
+async def handle_institute_choice(
+    callback: CallbackQuery,
+    state: FSMContext,
+    session: AsyncSession,
+    config: Config | None = None,
+) -> None:
+    telegram_user = callback.from_user
+    if telegram_user is None or callback.message is None:
+        return
+
+    try:
+        hid = telegram_id_to_hid(telegram_user.id)
+    except HIDError:
+        logger.error("Profile institute aborted: HID encoding failed")
+        return
+
+    user = await get_user(session, hid)
+    if user is None or user.is_banned:
+        return
+
+    data = await state.get_data()
+    if data.get(REGISTRATION_STEP_KEY) != RegistrationStep.INSTITUTE.value:
+        return
+    if user.status not in INSTITUTE_REQUIRED_STATUSES:
+        return
+
+    institute = parse_institute(
+        (callback.data or "").removeprefix(INSTITUTE_CALLBACK_PREFIX),
+        _institute_options(config),
+    )
+    if institute is None:
+        return
+
+    await set_user_institute(session, user, institute)
+    await state.update_data(
+        {REGISTRATION_STEP_KEY: RegistrationStep.TIMEZONE.value}
+    )
+    await callback.answer()
+    await callback.message.edit_text(TIMEZONE_QUESTION, reply_markup=None)
+    logger.info("Profile institute selected: hid=%s", user.hid)
+
+
+@router.message(F.text, ~F.text.startswith("/"))
+async def handle_timezone_input(
+    message: Message,
+    state: FSMContext,
+    session: AsyncSession,
+) -> None:
+    telegram_user = message.from_user
+    if telegram_user is None:
+        return
+
+    try:
+        hid = telegram_id_to_hid(telegram_user.id)
+    except HIDError:
+        logger.error("Profile timezone aborted: HID encoding failed")
+        return
+
+    user = await get_user(session, hid)
+    if user is None or user.is_banned or user.status is None:
+        return
+    if (
+        user.status in INSTITUTE_REQUIRED_STATUSES
+        and user.institute is None
+    ):
+        return
+
+    data = await state.get_data()
+    if data.get(REGISTRATION_STEP_KEY) != RegistrationStep.TIMEZONE.value:
+        return
+
+    offset = parse_timezone(message.text)
+    if offset is None:
+        await message.answer(TIMEZONE_INVALID)
+        logger.info("Profile timezone invalid: hid=%s", user.hid)
+        return
+
+    if user.registered_at is None:
+        await mark_user_registered(session, user)
+    await set_user_timezone(session, user, offset)
+    await state.update_data(
+        {REGISTRATION_STEP_KEY: RegistrationStep.COMPLETE.value}
+    )
+    await _send_registration_complete(message)
+    logger.info("Profile complete: hid=%s", user.hid)

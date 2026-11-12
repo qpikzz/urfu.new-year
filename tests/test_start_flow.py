@@ -371,7 +371,9 @@ async def test_start_resumes_interrupted_registration(
 
     assert user.full_name == "Test User"
     assert user.username == "test_user"
-    message.answer.assert_not_awaited()
+    message.answer.assert_awaited_once()
+    assert message.answer.await_args.args[0] == texts.STATUS_QUESTION
+    assert message.answer.await_args.kwargs["reply_markup"] is not None
     assert state.data[REGISTRATION_STEP_KEY] == RegistrationStep.STATUS.value
 
 

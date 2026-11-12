@@ -14,6 +14,15 @@ from app.services.captcha import (
     wrong_attempts_from_state,
 )
 from app.services.menu import build_menu_text
+from app.services.profile import (
+    TEST_INSTITUTES,
+    TIMEZONE_MAX,
+    TIMEZONE_MIN,
+    institute_options,
+    parse_institute,
+    parse_status,
+    parse_timezone,
+)
 from app.services.registration import (
     CAPTCHA_PASSED_KEY,
     CONSENT_ACCEPTED_KEY,
@@ -38,11 +47,18 @@ __all__ = [
     "REGISTRATION_STEP_KEY",
     "CaptchaChallenge",
     "RegistrationStep",
+    "TEST_INSTITUTES",
+    "TIMEZONE_MAX",
+    "TIMEZONE_MIN",
     "build_menu_text",
     "captcha_attempts_left",
     "challenge_from_state",
     "create_captcha_challenge",
+    "institute_options",
     "is_registration_complete",
+    "parse_institute",
+    "parse_status",
+    "parse_timezone",
     "resolve_registration_step",
     "resume_registration",
     "wrong_attempts_from_state",
