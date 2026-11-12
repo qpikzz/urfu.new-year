@@ -1,5 +1,18 @@
 """Application services used by handlers and background tasks."""
 
+from app.services.captcha import (
+    CAPTCHA_CORRECT_KEY,
+    CAPTCHA_KIND_KEY,
+    CAPTCHA_KINDS,
+    CAPTCHA_MAX_ATTEMPTS,
+    CAPTCHA_OPTIONS_KEY,
+    CAPTCHA_WRONG_ATTEMPTS_KEY,
+    CaptchaChallenge,
+    captcha_attempts_left,
+    challenge_from_state,
+    create_captcha_challenge,
+    wrong_attempts_from_state,
+)
 from app.services.menu import build_menu_text
 from app.services.registration import (
     CAPTCHA_PASSED_KEY,
@@ -13,13 +26,24 @@ from app.services.registration import (
 )
 
 __all__ = [
+    "CAPTCHA_CORRECT_KEY",
+    "CAPTCHA_KIND_KEY",
+    "CAPTCHA_KINDS",
+    "CAPTCHA_MAX_ATTEMPTS",
+    "CAPTCHA_OPTIONS_KEY",
+    "CAPTCHA_WRONG_ATTEMPTS_KEY",
     "CAPTCHA_PASSED_KEY",
     "CONSENT_ACCEPTED_KEY",
     "INSTITUTE_REQUIRED_STATUSES",
     "REGISTRATION_STEP_KEY",
+    "CaptchaChallenge",
     "RegistrationStep",
     "build_menu_text",
+    "captcha_attempts_left",
+    "challenge_from_state",
+    "create_captcha_challenge",
     "is_registration_complete",
     "resolve_registration_step",
     "resume_registration",
+    "wrong_attempts_from_state",
 ]

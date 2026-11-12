@@ -324,7 +324,8 @@ async def test_start_creates_user_and_sends_welcome(
     assert user is not None
     assert user.full_name == "Test User"
     assert user.username == "test_user"
-    message.answer.assert_awaited_once_with(texts.START_WELCOME)
+    assert message.answer.await_count == 2
+    assert message.answer.await_args_list[0].args[0] == texts.START_WELCOME
     assert state.data[REGISTRATION_STEP_KEY] == RegistrationStep.CAPTCHA.value
 
 
@@ -370,7 +371,7 @@ async def test_start_resumes_interrupted_registration(
 
     assert user.full_name == "Test User"
     assert user.username == "test_user"
-    message.answer.assert_awaited_once_with(texts.START_WELCOME)
+    message.answer.assert_not_awaited()
     assert state.data[REGISTRATION_STEP_KEY] == RegistrationStep.STATUS.value
 
 
