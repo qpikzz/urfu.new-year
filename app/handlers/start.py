@@ -155,6 +155,24 @@ async def _send_registration_complete(message: Message) -> None:
     await message.answer(CIRCLE_ASK)
 
 
+async def send_registration_step(
+    message: Message,
+    state: FSMContext,
+    config: Config | None,
+    step: RegistrationStep,
+) -> None:
+    if step == RegistrationStep.CAPTCHA:
+        await _send_captcha_question(message, state)
+    elif step == RegistrationStep.CONSENT:
+        await _send_consent_question(message, config)
+    elif step == RegistrationStep.STATUS:
+        await _send_status_question(message)
+    elif step == RegistrationStep.INSTITUTE:
+        await _send_institute_question(message, config)
+    elif step == RegistrationStep.TIMEZONE:
+        await _send_timezone_question(message)
+
+
 @router.message(CommandStart())
 async def handle_start(
     message: Message,
@@ -203,16 +221,7 @@ async def handle_start(
     step = await resume_registration(state, user)
     if created:
         await message.answer(START_WELCOME)
-    if step == RegistrationStep.CAPTCHA:
-        await _send_captcha_question(message, state)
-    elif step == RegistrationStep.CONSENT:
-        await _send_consent_question(message, config)
-    elif step == RegistrationStep.STATUS:
-        await _send_status_question(message)
-    elif step == RegistrationStep.INSTITUTE:
-        await _send_institute_question(message, config)
-    elif step == RegistrationStep.TIMEZONE:
-        await _send_timezone_question(message)
+    await send_registration_step(message, state, config, step)
     logger.info("Start flow: hid=%s step=%s", user.hid, step.value)
 
 

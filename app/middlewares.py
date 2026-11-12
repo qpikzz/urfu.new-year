@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.db.requests import get_user
+from app.hid import HIDError, telegram_id_to_hid
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseMiddleware(BaseMiddleware):
@@ -33,4 +39,39 @@ class DatabaseMiddleware(BaseMiddleware):
             return result
 
 
-__all__ = ["DatabaseMiddleware"]
+class BanMiddleware(BaseMiddleware):
+    """Ignore updates from participants who are banned."""
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        session: AsyncSession | None = data.get("session")
+        if session is None:
+            raise RuntimeError("Database session is not available")
+
+        telegram_user = data.get("event_from_user") or getattr(
+            event,
+            "from_user",
+            None,
+        )
+        if telegram_user is None:
+            return await handler(event, data)
+
+        try:
+            hid = telegram_id_to_hid(telegram_user.id)
+        except HIDError:
+            logger.error("Ban check aborted: HID encoding failed")
+            return None
+
+        user = await get_user(session, hid)
+        if user is not None and user.is_banned:
+            logger.info("Banned update ignored: hid=%s", user.hid)
+            return None
+
+        return await handler(event, data)
+
+
+__all__ = ["BanMiddleware", "DatabaseMiddleware"]

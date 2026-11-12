@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import Config, ConfigError
-from app.handlers import start
-from app.middlewares import DatabaseMiddleware
+from app.handlers import menu, start
+from app.middlewares import BanMiddleware, DatabaseMiddleware
 
 
 def create_engine(database_url: str) -> AsyncEngine:
@@ -32,9 +32,13 @@ def create_dispatcher(
 ) -> Dispatcher:
     dispatcher = Dispatcher(storage=MemoryStorage(), config=config)
     database_middleware = DatabaseMiddleware(session_factory)
+    ban_middleware = BanMiddleware()
     dispatcher.message.middleware(database_middleware)
+    dispatcher.message.middleware(ban_middleware)
     dispatcher.callback_query.middleware(database_middleware)
+    dispatcher.callback_query.middleware(ban_middleware)
     dispatcher.include_router(start.router)
+    dispatcher.include_router(menu.router)
     return dispatcher
 
 

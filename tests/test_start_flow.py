@@ -22,9 +22,9 @@ from app.db.requests import (
     set_user_status,
     set_user_timezone,
 )
-from app.handlers import start
+from app.handlers import menu, start
 from app.hid import HIDError
-from app.middlewares import DatabaseMiddleware
+from app.middlewares import BanMiddleware, DatabaseMiddleware
 from app.services import (
     CAPTCHA_PASSED_KEY,
     CONSENT_ACCEPTED_KEY,
@@ -505,7 +505,7 @@ async def test_database_middleware_rolls_back_on_error() -> None:
     assert session.closed
 
 
-def test_dispatcher_includes_start_router_and_config() -> None:
+def test_dispatcher_includes_routers_and_config() -> None:
     config = Config(bot_token="123456:fake", privacy_url="https://privacy")
     dispatcher = create_dispatcher(  # type: ignore[arg-type]
         FakeSessionFactory(),
@@ -513,7 +513,13 @@ def test_dispatcher_includes_start_router_and_config() -> None:
     )
 
     assert start.router in dispatcher.sub_routers
+    assert menu.router in dispatcher.sub_routers
     assert dispatcher.get("config") is config
+
+    for observer in (dispatcher.message, dispatcher.callback_query):
+        middlewares = list(observer.middleware)
+        assert isinstance(middlewares[0], DatabaseMiddleware)
+        assert isinstance(middlewares[1], BanMiddleware)
 
 
 @pytest.mark.asyncio
