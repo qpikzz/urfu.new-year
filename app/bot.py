@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import Config, ConfigError
-from app.handlers import menu, start
+from app.handlers import circle, menu, start
 from app.middlewares import BanMiddleware, DatabaseMiddleware
 
 
@@ -37,6 +37,7 @@ def create_dispatcher(
     dispatcher.message.middleware(ban_middleware)
     dispatcher.callback_query.middleware(database_middleware)
     dispatcher.callback_query.middleware(ban_middleware)
+    dispatcher.include_router(circle.router)
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
     return dispatcher

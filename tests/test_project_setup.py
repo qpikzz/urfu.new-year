@@ -21,6 +21,10 @@ COMMAND_HANDLERS = {
     "close",
 }
 
+NON_COMMAND_HANDLERS = {"circle"}
+
+HANDLER_MODULES = COMMAND_HANDLERS | NON_COMMAND_HANDLERS
+
 
 def test_run_entry_point_returns_success(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("BOT_TOKEN", "123456:fake")
@@ -41,12 +45,12 @@ def test_handler_files_match_commands() -> None:
     handlers_dir = ROOT / "app" / "handlers"
     files = {path.stem for path in handlers_dir.glob("*.py")} - {"__init__"}
 
-    assert files == COMMAND_HANDLERS
+    assert files == HANDLER_MODULES
 
 
-@pytest.mark.parametrize("command", sorted(COMMAND_HANDLERS))
-def test_handler_module_exposes_router(command: str) -> None:
-    module = importlib.import_module(f"app.handlers.{command}")
+@pytest.mark.parametrize("handler", sorted(HANDLER_MODULES))
+def test_handler_module_exposes_router(handler: str) -> None:
+    module = importlib.import_module(f"app.handlers.{handler}")
 
     assert module.router is not None
 

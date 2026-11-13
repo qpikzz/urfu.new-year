@@ -22,7 +22,7 @@ from app.db.requests import (
     set_user_status,
     set_user_timezone,
 )
-from app.handlers import menu, start
+from app.handlers import circle, menu, start
 from app.hid import HIDError
 from app.middlewares import BanMiddleware, DatabaseMiddleware
 from app.services import (
@@ -512,8 +512,12 @@ def test_dispatcher_includes_routers_and_config() -> None:
         config,
     )
 
+    assert circle.router in dispatcher.sub_routers
     assert start.router in dispatcher.sub_routers
     assert menu.router in dispatcher.sub_routers
+    assert dispatcher.sub_routers.index(circle.router) < dispatcher.sub_routers.index(
+        start.router
+    )
     assert dispatcher.get("config") is config
 
     for observer in (dispatcher.message, dispatcher.callback_query):

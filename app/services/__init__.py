@@ -13,6 +13,13 @@ from app.services.captcha import (
     create_captcha_challenge,
     wrong_attempts_from_state,
 )
+from app.services.circle_intake import (
+    MAX_CIRCLE_DURATION,
+    MIN_CIRCLE_DURATION,
+    PROCESSING_STATUSES,
+    is_circle_in_progress,
+    is_valid_circle_duration,
+)
 from app.services.menu import build_menu_text
 from app.services.profile import (
     TEST_INSTITUTES,
@@ -44,6 +51,9 @@ __all__ = [
     "CAPTCHA_PASSED_KEY",
     "CONSENT_ACCEPTED_KEY",
     "INSTITUTE_REQUIRED_STATUSES",
+    "MAX_CIRCLE_DURATION",
+    "MIN_CIRCLE_DURATION",
+    "PROCESSING_STATUSES",
     "REGISTRATION_STEP_KEY",
     "CaptchaChallenge",
     "RegistrationStep",
@@ -55,7 +65,9 @@ __all__ = [
     "challenge_from_state",
     "create_captcha_challenge",
     "institute_options",
+    "is_circle_in_progress",
     "is_registration_complete",
+    "is_valid_circle_duration",
     "parse_institute",
     "parse_status",
     "parse_timezone",
