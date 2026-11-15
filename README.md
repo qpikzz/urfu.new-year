@@ -14,6 +14,11 @@
 - PostgreSQL, async SQLAlchemy и Alembic (появятся в следующих задачах)
 - pytest и pytest-asyncio
 
+## Требования
+
+- Python 3.13+
+- PostgreSQL (для продакшена)
+
 ## Быстрый старт
 
 ```bash
