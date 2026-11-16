@@ -31,6 +31,8 @@ cp .env.example .env          # Linux/macOS
 python run.py
 ```
 
+Перед запуском заполните `.env` по образцу `.env.example`.
+
 ## Тесты
 
 ```bash
