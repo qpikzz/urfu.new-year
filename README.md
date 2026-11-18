@@ -48,6 +48,8 @@ run.py            # единственная точка входа
 app/handlers/     # по одному модулю на команду
 app/keyboards/    # клавиатуры
 app/content/      # тексты для пользователя
+security/         # проверки и защита от спама
+migrations/       # миграции Alembic
 tests/            # тесты
 openspec/         # спецификации и файлы задач
 ```
