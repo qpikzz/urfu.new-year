@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import utc_now
@@ -103,3 +103,49 @@ async def count_pending_circles(session: AsyncSession) -> int:
         .where(Circle.status == CircleStatus.PENDING_AUTO)
     )
     return int((await session.scalar(query)) or 0)
+
+
+async def get_circles_pending_manual(session: AsyncSession) -> list[Circle]:
+    query = (
+        select(Circle)
+        .where(Circle.status == CircleStatus.PENDING_MANUAL)
+        .order_by(Circle.sent_at, Circle.id)
+    )
+    return list((await session.scalars(query)).all())
+
+
+async def decide_manual_circle(
+    session: AsyncSession,
+    cir_id: int,
+    *,
+    approved: bool,
+    reason: RejectionReason | None = None,
+) -> Circle | None:
+    """Apply the first manual decision to a circle awaiting review.
+
+    The conditional update guarantees that only one administrator wins even
+    when several decisions arrive concurrently.
+    """
+    if not approved and reason is None:
+        raise ValueError("A manual rejection requires a reason")
+
+    values = {
+        "status": CircleStatus.APPROVED if approved else CircleStatus.REJECTED,
+        "is_buffered": False,
+        "rejection_reason": None if approved else reason,
+        "rejected_by": None if approved else RejectedBy.MANUAL,
+    }
+    result = await session.execute(
+        update(Circle)
+        .where(
+            Circle.id == cir_id,
+            Circle.status == CircleStatus.PENDING_MANUAL,
+        )
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount == 0:
+        return None
+
+    await session.flush()
+    return await session.get(Circle, cir_id, populate_existing=True)

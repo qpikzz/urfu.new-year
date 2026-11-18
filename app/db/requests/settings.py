@@ -26,3 +26,12 @@ async def set_setting(
 
     await session.flush()
     return setting
+
+
+async def delete_setting(session: AsyncSession, key: str) -> bool:
+    setting = await session.get(Setting, key)
+    if setting is None:
+        return False
+    await session.delete(setting)
+    await session.flush()
+    return True

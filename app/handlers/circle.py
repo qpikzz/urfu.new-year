@@ -6,6 +6,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.dispatcher.event.bases import SkipHandler
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,13 +23,17 @@ from app.db.requests import (
     create_circle,
     get_circle,
     get_user,
+    increment_resubmissions,
     set_user_circle,
 )
 from app.hid import HIDError, telegram_id_to_hid
 from app.services import (
+    AWAITING_NEW_CIRCLE_KEY,
+    is_awaiting_new_circle,
     is_circle_in_progress,
     is_registration_complete,
     is_valid_circle_duration,
+    was_manually_rejected,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,10 +69,55 @@ async def _get_latest_circle(
     return await get_circle(session, user.cir_id)
 
 
+async def _clear_new_circle_request(state: FSMContext | None) -> None:
+    if state is not None:
+        await state.update_data({AWAITING_NEW_CIRCLE_KEY: False})
+
+
+async def _submit_circle(
+    message: Message,
+    session: AsyncSession,
+    state: FSMContext | None,
+    user: User,
+    *,
+    file_id: str,
+    duration: int,
+    previous: Circle | None,
+) -> Circle:
+    circle = await create_circle(
+        session,
+        owner_hid=user.hid,
+        file_id=file_id,
+        duration=duration,
+        status=CircleStatus.PENDING_AUTO,
+    )
+    await set_user_circle(session, user, circle.id)
+
+    if was_manually_rejected(previous):
+        used = await increment_resubmissions(session, user)
+        logger.info(
+            "Resubmission recorded: hid=%s previous_cir_id=%s used=%s",
+            user.hid,
+            previous.id,
+            used,
+        )
+
+    await _clear_new_circle_request(state)
+    await message.answer(CIRCLE_QUEUED)
+    logger.info(
+        "Circle queued: hid=%s cir_id=%s duration=%s",
+        user.hid,
+        circle.id,
+        duration,
+    )
+    return circle
+
+
 @router.message(F.video_note)
 async def handle_video_note(
     message: Message,
     session: AsyncSession,
+    state: FSMContext | None = None,
 ) -> None:
     user = await _get_participant(message, session)
     if user is None or not is_registration_complete(user):
@@ -90,6 +140,7 @@ async def handle_video_note(
     latest = await _get_latest_circle(session, user)
     if latest is not None:
         if is_circle_in_progress(latest):
+            await _clear_new_circle_request(state)
             await message.answer(CIRCLE_IN_PROGRESS)
             logger.info(
                 "Circle declined, previous in progress: hid=%s cir_id=%s",
@@ -98,28 +149,24 @@ async def handle_video_note(
             )
             return
 
-        await message.answer(NEW_ASK)
-        logger.info(
-            "Circle declined, /new required: hid=%s cir_id=%s",
-            user.hid,
-            latest.id,
-        )
-        return
+        state_data = await state.get_data() if state is not None else {}
+        if not is_awaiting_new_circle(state_data):
+            await message.answer(NEW_ASK)
+            logger.info(
+                "Circle declined, /new required: hid=%s cir_id=%s",
+                user.hid,
+                latest.id,
+            )
+            return
 
-    circle = await create_circle(
+    await _submit_circle(
+        message,
         session,
-        owner_hid=user.hid,
+        state,
+        user,
         file_id=video_note.file_id,
         duration=duration,
-        status=CircleStatus.PENDING_AUTO,
-    )
-    await set_user_circle(session, user, circle.id)
-    await message.answer(CIRCLE_QUEUED)
-    logger.info(
-        "Circle queued: hid=%s cir_id=%s duration=%s",
-        user.hid,
-        circle.id,
-        duration,
+        previous=latest,
     )
 
 

@@ -9,17 +9,20 @@ from app.keyboards import (
     CAPTCHA_CALLBACK_PREFIX,
     CONSENT_ACCEPT_CALLBACK,
     CONSENT_CONTINUE_CALLBACK,
-    MODERATION_APPROVE_CALLBACK,
-    MODERATION_CANCEL_CALLBACK,
-    MODERATION_REJECT_CALLBACK,
     captcha_keyboard,
     consent_continue_keyboard,
     consent_keyboard,
     institutes_keyboard,
+    moderation_approve_callback_data,
+    moderation_cancel_callback_data,
     moderation_keyboard,
+    moderation_reject_callback_data,
+    rejection_callback_data,
     rejection_reasons_keyboard,
     status_keyboard,
 )
+
+CIR_ID = 42
 
 
 def _rows(
@@ -99,43 +102,57 @@ def test_institutes_keyboard_can_be_empty() -> None:
 
 
 def test_moderation_keyboard_has_approve_and_reject_buttons() -> None:
-    rows = _rows(moderation_keyboard())
+    rows = _rows(moderation_keyboard(CIR_ID))
 
     assert rows == [
         [
-            (texts.MODERATION_APPROVE_BUTTON, MODERATION_APPROVE_CALLBACK),
-            (texts.MODERATION_REJECT_BUTTON, MODERATION_REJECT_CALLBACK),
+            (
+                texts.MODERATION_APPROVE_BUTTON,
+                moderation_approve_callback_data(CIR_ID),
+            ),
+            (
+                texts.MODERATION_REJECT_BUTTON,
+                moderation_reject_callback_data(CIR_ID),
+            ),
         ]
     ]
 
 
 def test_rejection_reasons_keyboard_has_all_options_in_order() -> None:
-    rows = _rows(rejection_reasons_keyboard())
+    rows = _rows(rejection_reasons_keyboard(CIR_ID))
 
     assert rows == [
-        [(texts.REJECTION_CANCEL_BUTTON, MODERATION_CANCEL_CALLBACK)],
+        [
+            (
+                texts.REJECTION_CANCEL_BUTTON,
+                moderation_cancel_callback_data(CIR_ID),
+            )
+        ],
         [
             (
                 texts.REJECTION_PROFANITY_BUTTON,
-                f"moderation:reject:{RejectionReason.PROFANITY.value}",
+                rejection_callback_data(CIR_ID, RejectionReason.PROFANITY),
             )
         ],
         [
             (
                 texts.REJECTION_SHOCKING_CONTENT_BUTTON,
-                f"moderation:reject:{RejectionReason.SHOCKING_CONTENT.value}",
+                rejection_callback_data(
+                    CIR_ID,
+                    RejectionReason.SHOCKING_CONTENT,
+                ),
             )
         ],
         [
             (
                 texts.REJECTION_ADVERTISING_BUTTON,
-                f"moderation:reject:{RejectionReason.ADVERTISING.value}",
+                rejection_callback_data(CIR_ID, RejectionReason.ADVERTISING),
             )
         ],
         [
             (
                 texts.REJECTION_OTHER_BUTTON,
-                f"moderation:reject:{RejectionReason.OTHER.value}",
+                rejection_callback_data(CIR_ID, RejectionReason.OTHER),
             )
         ],
     ]
@@ -149,8 +166,8 @@ def test_rejection_reasons_keyboard_has_all_options_in_order() -> None:
         consent_keyboard(),
         status_keyboard(),
         institutes_keyboard(["ИРИТ-РТФ", "ИнЭУ", "ГУК"]),
-        moderation_keyboard(),
-        rejection_reasons_keyboard(),
+        moderation_keyboard(CIR_ID),
+        rejection_reasons_keyboard(CIR_ID),
     ],
 )
 def test_callback_data_fits_telegram_limit(

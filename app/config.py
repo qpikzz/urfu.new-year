@@ -14,6 +14,7 @@ _BOT_TOKEN_PATTERN = re.compile(r"^\d+:[A-Za-z0-9_-]+$")
 _LIST_SEPARATOR = re.compile(r"[,;\s]+")
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+_SPEECH_ENGINES = frozenset({"gigaam", "vosk"})
 
 
 class ConfigError(ValueError):
@@ -86,6 +87,16 @@ def _parse_admin_chat_id(values: Mapping[str, str]) -> int | None:
         raise ConfigError("ADMIN_CHAT_ID must be an integer") from exc
 
 
+def _parse_speech_engine(values: Mapping[str, str]) -> str:
+    value = _optional(values, "SPEECH_ENGINE")
+    if value is None:
+        return "gigaam"
+    normalized = value.lower()
+    if normalized not in _SPEECH_ENGINES:
+        raise ConfigError("SPEECH_ENGINE must be gigaam or vosk")
+    return normalized
+
+
 @dataclass(frozen=True, slots=True)
 class Config:
     """Validated runtime configuration.
@@ -105,6 +116,11 @@ class Config:
     database_url: str | None = field(default=None, repr=False)
     groq_api_key: str | None = field(default=None, repr=False)
     crypt_keys: tuple[str, ...] = field(default=(), repr=False)
+    speech_engine: str = "gigaam"
+    gigaam_model_path: str | None = field(default=None, repr=False)
+    gigaam_config_path: str | None = field(default=None, repr=False)
+    vosk_model_path: str | None = field(default=None, repr=False)
+    ffmpeg_path: str = field(default="ffmpeg", repr=False)
     log_file: Path = field(default_factory=default_log_path, repr=False)
 
     @classmethod
@@ -122,6 +138,11 @@ class Config:
             database_url=_optional(values, "DATABASE_URL"),
             groq_api_key=_optional(values, "GROQ_API_KEY"),
             crypt_keys=_parse_crypt_keys(values),
+            speech_engine=_parse_speech_engine(values),
+            gigaam_model_path=_optional(values, "GIGAAM_MODEL_PATH"),
+            gigaam_config_path=_optional(values, "GIGAAM_CONFIG_PATH"),
+            vosk_model_path=_optional(values, "VOSK_MODEL_PATH"),
+            ffmpeg_path=_optional(values, "FFMPEG_PATH") or "ffmpeg",
         )
 
     def secrets(self) -> tuple[str, ...]:
@@ -141,7 +162,7 @@ class Config:
         )
         return tuple(value for value in values if value)
 
-    def public_summary(self) -> dict[str, bool | int]:
+    def public_summary(self) -> dict[str, bool | int | str]:
         """Return safe diagnostic values for the startup log."""
         return {
             "admin_chat_configured": self.admin_chat_id is not None,
@@ -149,6 +170,11 @@ class Config:
             "institutes": len(self.institutes),
             "crypt_keys": len(self.crypt_keys),
             "intake_closed": self.intake_closed,
+            "speech_engine": self.speech_engine,
+            "gigaam_configured": bool(
+                self.gigaam_model_path and self.gigaam_config_path
+            ),
+            "vosk_configured": bool(self.vosk_model_path),
         }
 
 

@@ -31,6 +31,11 @@ ENV_NAMES = (
     "DATABASE_URL",
     "GROQ_API_KEY",
     "CRYPT_KEY",
+    "SPEECH_ENGINE",
+    "GIGAAM_MODEL_PATH",
+    "GIGAAM_CONFIG_PATH",
+    "VOSK_MODEL_PATH",
+    "FFMPEG_PATH",
 )
 
 
@@ -47,6 +52,11 @@ def full_environment() -> dict[str, str]:
         "DATABASE_URL": FAKE_DATABASE_URL,
         "GROQ_API_KEY": FAKE_GROQ_KEY,
         "CRYPT_KEY": FAKE_CRYPT_KEYS,
+        "SPEECH_ENGINE": "vosk",
+        "GIGAAM_MODEL_PATH": "/models/v3_ctc_int8.onnx",
+        "GIGAAM_CONFIG_PATH": "/models/v3_ctc.yaml",
+        "VOSK_MODEL_PATH": "/models/vosk-small",
+        "FFMPEG_PATH": "/usr/bin/ffmpeg",
     }
 
 
@@ -69,6 +79,11 @@ def test_config_parses_full_environment() -> None:
     assert config.database_url == FAKE_DATABASE_URL
     assert config.groq_api_key == FAKE_GROQ_KEY
     assert config.crypt_keys == ("0123456789", "abcdefghij")
+    assert config.speech_engine == "vosk"
+    assert config.gigaam_model_path == "/models/v3_ctc_int8.onnx"
+    assert config.gigaam_config_path == "/models/v3_ctc.yaml"
+    assert config.vosk_model_path == "/models/vosk-small"
+    assert config.ffmpeg_path == "/usr/bin/ffmpeg"
 
 
 def test_config_uses_safe_defaults_for_optional_values() -> None:
@@ -84,6 +99,11 @@ def test_config_uses_safe_defaults_for_optional_values() -> None:
     assert config.database_url is None
     assert config.groq_api_key is None
     assert config.crypt_keys == ()
+    assert config.speech_engine == "gigaam"
+    assert config.gigaam_model_path is None
+    assert config.gigaam_config_path is None
+    assert config.vosk_model_path is None
+    assert config.ffmpeg_path == "ffmpeg"
     assert config.log_file.name == "logs.txt"
 
 
@@ -106,6 +126,7 @@ def test_config_rejects_invalid_bot_token(values: dict[str, str]) -> None:
     [
         {"BOT_TOKEN": FAKE_TOKEN, "ADMIN_CHAT_ID": "chat"},
         {"BOT_TOKEN": FAKE_TOKEN, "INTAKE_CLOSED": "maybe"},
+        {"BOT_TOKEN": FAKE_TOKEN, "SPEECH_ENGINE": "whisper"},
     ],
 )
 def test_config_rejects_invalid_values(values: dict[str, str]) -> None:
@@ -156,6 +177,9 @@ def test_config_reports_crypt_key_count_only() -> None:
     summary = config.public_summary()
 
     assert summary["crypt_keys"] == 2
+    assert summary["speech_engine"] == "vosk"
+    assert summary["gigaam_configured"] is True
+    assert summary["vosk_configured"] is True
     assert FAKE_CRYPT_KEYS not in str(summary)
 
 

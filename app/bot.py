@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+from contextlib import suppress
+
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.ext.asyncio import (
@@ -12,8 +15,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import Config, ConfigError
-from app.handlers import circle, menu, start
+from app.handlers import circle, menu, moderation, new, start
 from app.middlewares import BanMiddleware, DatabaseMiddleware
+from app.services import run_manual_moderation_worker
 
 
 def create_engine(database_url: str) -> AsyncEngine:
@@ -40,6 +44,8 @@ def create_dispatcher(
     dispatcher.include_router(circle.router)
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
+    dispatcher.include_router(new.router)
+    dispatcher.include_router(moderation.router)
     return dispatcher
 
 
@@ -51,9 +57,18 @@ async def run_bot(config: Config) -> None:
     session_factory = create_session_factory(engine)
     dispatcher = create_dispatcher(session_factory, config)
     bot = Bot(token=config.bot_token)
+    moderation_worker: asyncio.Task[None] | None = None
+    if config.admin_chat_id is not None:
+        moderation_worker = asyncio.create_task(
+            run_manual_moderation_worker(session_factory, bot, config)
+        )
     try:
         await dispatcher.start_polling(bot)
     finally:
+        if moderation_worker is not None:
+            moderation_worker.cancel()
+            with suppress(asyncio.CancelledError):
+                await moderation_worker
         await bot.session.close()
         await engine.dispose()
 

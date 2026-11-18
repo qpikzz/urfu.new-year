@@ -14,10 +14,10 @@ CONSENT_CONTINUE_CALLBACK = "consent:continue"
 CONSENT_ACCEPT_CALLBACK = "consent:accept"
 STATUS_CALLBACK_PREFIX = "status:"
 INSTITUTE_CALLBACK_PREFIX = "institute:"
-MODERATION_APPROVE_CALLBACK = "moderation:approve"
-MODERATION_CANCEL_CALLBACK = "moderation:cancel"
-MODERATION_REJECT_CALLBACK = "moderation:reject"
-MODERATION_REJECT_CALLBACK_PREFIX = f"{MODERATION_REJECT_CALLBACK}:"
+MODERATION_CALLBACK_PREFIX = "moderation:"
+MODERATION_APPROVE_ACTION = "approve"
+MODERATION_REJECT_ACTION = "reject"
+MODERATION_CANCEL_ACTION = "cancel"
 
 CAPTCHA_BUTTON_COUNT = 4
 
@@ -40,8 +40,25 @@ def institute_callback_data(index: int) -> str:
     return f"{INSTITUTE_CALLBACK_PREFIX}{index}"
 
 
-def rejection_callback_data(reason: RejectionReason) -> str:
-    return f"{MODERATION_REJECT_CALLBACK_PREFIX}{reason.value}"
+def moderation_approve_callback_data(cir_id: int) -> str:
+    return (
+        f"{MODERATION_CALLBACK_PREFIX}{MODERATION_APPROVE_ACTION}:{cir_id}"
+    )
+
+
+def moderation_reject_callback_data(cir_id: int) -> str:
+    return f"{MODERATION_CALLBACK_PREFIX}{MODERATION_REJECT_ACTION}:{cir_id}"
+
+
+def moderation_cancel_callback_data(cir_id: int) -> str:
+    return f"{MODERATION_CALLBACK_PREFIX}{MODERATION_CANCEL_ACTION}:{cir_id}"
+
+
+def rejection_callback_data(cir_id: int, reason: RejectionReason) -> str:
+    return (
+        f"{MODERATION_CALLBACK_PREFIX}{MODERATION_REJECT_ACTION}"
+        f":{cir_id}:{reason.value}"
+    )
 
 
 def captcha_keyboard(emojis: Sequence[str]) -> InlineKeyboardMarkup:
@@ -98,42 +115,48 @@ def institutes_keyboard(institutes: Sequence[str]) -> InlineKeyboardMarkup:
     )
 
 
-def moderation_keyboard() -> InlineKeyboardMarkup:
+def moderation_keyboard(cir_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 _button(
                     texts.MODERATION_APPROVE_BUTTON,
-                    MODERATION_APPROVE_CALLBACK,
+                    moderation_approve_callback_data(cir_id),
                 ),
                 _button(
                     texts.MODERATION_REJECT_BUTTON,
-                    MODERATION_REJECT_CALLBACK,
+                    moderation_reject_callback_data(cir_id),
                 ),
             ]
         ]
     )
 
 
-def rejection_reasons_keyboard() -> InlineKeyboardMarkup:
+def rejection_reasons_keyboard(cir_id: int) -> InlineKeyboardMarkup:
     return _single_column(
         [
-            (texts.REJECTION_CANCEL_BUTTON, MODERATION_CANCEL_CALLBACK),
+            (
+                texts.REJECTION_CANCEL_BUTTON,
+                moderation_cancel_callback_data(cir_id),
+            ),
             (
                 texts.REJECTION_PROFANITY_BUTTON,
-                rejection_callback_data(RejectionReason.PROFANITY),
+                rejection_callback_data(cir_id, RejectionReason.PROFANITY),
             ),
             (
                 texts.REJECTION_SHOCKING_CONTENT_BUTTON,
-                rejection_callback_data(RejectionReason.SHOCKING_CONTENT),
+                rejection_callback_data(
+                    cir_id,
+                    RejectionReason.SHOCKING_CONTENT,
+                ),
             ),
             (
                 texts.REJECTION_ADVERTISING_BUTTON,
-                rejection_callback_data(RejectionReason.ADVERTISING),
+                rejection_callback_data(cir_id, RejectionReason.ADVERTISING),
             ),
             (
                 texts.REJECTION_OTHER_BUTTON,
-                rejection_callback_data(RejectionReason.OTHER),
+                rejection_callback_data(cir_id, RejectionReason.OTHER),
             ),
         ]
     )
