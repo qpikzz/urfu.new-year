@@ -22,7 +22,7 @@ from app.db.requests import (
     get_user,
     set_user_banned,
 )
-from app.hid import HIDError, hid_to_telegram_id, telegram_id_to_hid
+from app.hid import HIDError, hid_to_telegram_id
 from app.keyboards import (
     MODERATION_CALLBACK_PREFIX,
     rejection_reasons_keyboard,
@@ -30,9 +30,9 @@ from app.keyboards import (
 from app.services import (
     ModerationAction,
     clear_review_marker,
-    is_admin_hid,
     is_manual_resubmission_limit_reached,
     parse_moderation_callback,
+    resolve_admin_hid,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,15 +44,7 @@ async def _authorize(
     callback: CallbackQuery,
     config: Config | None,
 ) -> str | None:
-    telegram_user = callback.from_user
-    if telegram_user is None:
-        return None
-    try:
-        hid = telegram_id_to_hid(telegram_user.id)
-    except HIDError:
-        logger.error("Manual moderation aborted: HID encoding failed")
-        return None
-    return hid if is_admin_hid(hid, config) else None
+    return resolve_admin_hid(callback.from_user, config)
 
 
 async def _delete_message(callback: CallbackQuery) -> None:

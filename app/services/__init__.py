@@ -1,5 +1,12 @@
 """Application services used by handlers and background tasks."""
 
+from app.services.admin_access import (
+    ADMIN_COMMANDS,
+    admin_command_from_text,
+    is_admin_command,
+    is_admin_hid,
+    resolve_admin_hid,
+)
 from app.services.captcha import (
     CAPTCHA_CORRECT_KEY,
     CAPTCHA_KIND_KEY,
@@ -32,7 +39,6 @@ from app.services.manual_moderation import (
     ModerationAction,
     ModerationCallback,
     clear_review_marker,
-    is_admin_hid,
     is_circle_sent_for_review,
     parse_moderation_callback,
     review_marker_key,
@@ -76,6 +82,7 @@ from app.services.speech_recognition import (
 )
 
 __all__ = [
+    "ADMIN_COMMANDS",
     "AWAITING_NEW_CIRCLE_KEY",
     "CAPTCHA_CORRECT_KEY",
     "CAPTCHA_KIND_KEY",
@@ -107,6 +114,7 @@ __all__ = [
     "TEST_INSTITUTES",
     "TIMEZONE_MAX",
     "TIMEZONE_MIN",
+    "admin_command_from_text",
     "build_menu_text",
     "captcha_attempts_left",
     "challenge_from_state",
@@ -116,6 +124,7 @@ __all__ = [
     "create_recognizer",
     "ctc_greedy_decode",
     "institute_options",
+    "is_admin_command",
     "is_admin_hid",
     "is_awaiting_new_circle",
     "is_circle_sent_for_review",
@@ -128,6 +137,7 @@ __all__ = [
     "parse_moderation_callback",
     "parse_status",
     "parse_timezone",
+    "resolve_admin_hid",
     "resolve_registration_step",
     "resume_registration",
     "review_marker_key",

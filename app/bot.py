@@ -16,7 +16,11 @@ from sqlalchemy.ext.asyncio import (
 
 from app.config import Config, ConfigError
 from app.handlers import circle, menu, moderation, new, start
-from app.middlewares import BanMiddleware, DatabaseMiddleware
+from app.middlewares import (
+    AdminAccessMiddleware,
+    BanMiddleware,
+    DatabaseMiddleware,
+)
 from app.services import run_manual_moderation_worker
 
 
@@ -37,8 +41,10 @@ def create_dispatcher(
     dispatcher = Dispatcher(storage=MemoryStorage(), config=config)
     database_middleware = DatabaseMiddleware(session_factory)
     ban_middleware = BanMiddleware()
+    admin_access_middleware = AdminAccessMiddleware()
     dispatcher.message.middleware(database_middleware)
     dispatcher.message.middleware(ban_middleware)
+    dispatcher.message.middleware(admin_access_middleware)
     dispatcher.callback_query.middleware(database_middleware)
     dispatcher.callback_query.middleware(ban_middleware)
     dispatcher.include_router(circle.router)

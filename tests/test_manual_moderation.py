@@ -74,8 +74,7 @@ async def make_circle(
 @pytest.fixture(autouse=True)
 def fake_hid(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        moderation,
-        "telegram_id_to_hid",
+        "app.services.admin_access.telegram_id_to_hid",
         lambda telegram_id: f"hid-{telegram_id}",
     )
     monkeypatch.setattr(

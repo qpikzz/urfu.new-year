@@ -26,6 +26,7 @@ from app.keyboards import (
     MODERATION_REJECT_ACTION,
     moderation_keyboard,
 )
+from app.services.admin_access import is_admin_hid
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,6 @@ class ModerationCallback:
 
 def review_marker_key(cir_id: int) -> str:
     return f"{_REVIEW_MARKER_PREFIX}{cir_id}"
-
-
-def is_admin_hid(hid: str | None, config: Config | None) -> bool:
-    return bool(hid and config is not None and hid in config.admin_hids)
 
 
 def _parse_cir_id(value: str) -> int | None:

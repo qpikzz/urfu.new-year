@@ -24,7 +24,11 @@ from app.db.requests import (
 )
 from app.handlers import circle, menu, moderation, new, start
 from app.hid import HIDError
-from app.middlewares import BanMiddleware, DatabaseMiddleware
+from app.middlewares import (
+    AdminAccessMiddleware,
+    BanMiddleware,
+    DatabaseMiddleware,
+)
 from app.services import (
     CAPTCHA_PASSED_KEY,
     CONSENT_ACCEPTED_KEY,
@@ -526,6 +530,9 @@ def test_dispatcher_includes_routers_and_config() -> None:
         middlewares = list(observer.middleware)
         assert isinstance(middlewares[0], DatabaseMiddleware)
         assert isinstance(middlewares[1], BanMiddleware)
+
+    message_middlewares = list(dispatcher.message.middleware)
+    assert isinstance(message_middlewares[2], AdminAccessMiddleware)
 
 
 @pytest.mark.asyncio
