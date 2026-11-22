@@ -23,6 +23,10 @@ from app.services.circle_intake import (
     is_valid_circle_duration,
     was_manually_rejected,
 )
+from app.services.limits import (
+    MANUAL_RESUBMISSIONS_LIMIT,
+    is_manual_resubmission_limit_reached,
+)
 from app.services.manual_moderation import (
     MANUAL_MODERATION_POLL_INTERVAL,
     ModerationAction,
@@ -86,6 +90,7 @@ __all__ = [
     "GigaAMOnnxRecognizer",
     "INSTITUTE_REQUIRED_STATUSES",
     "MANUAL_MODERATION_POLL_INTERVAL",
+    "MANUAL_RESUBMISSIONS_LIMIT",
     "MAX_CIRCLE_DURATION",
     "MIN_CIRCLE_DURATION",
     "ModerationAction",
@@ -115,6 +120,7 @@ __all__ = [
     "is_awaiting_new_circle",
     "is_circle_sent_for_review",
     "is_circle_in_progress",
+    "is_manual_resubmission_limit_reached",
     "is_registration_complete",
     "is_valid_circle_duration",
     "load_gigaam_config",

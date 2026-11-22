@@ -9,10 +9,19 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Config
-from app.content.texts import MODERATION_APPROVED, format_manual_rejected
-from app.db.enums import CircleStatus
+from app.content.texts import (
+    MODERATION_APPROVED,
+    format_ban_manual_limit,
+    format_manual_rejected,
+)
+from app.db.enums import CircleStatus, RejectionReason
 from app.db.models import Circle
-from app.db.requests import decide_manual_circle, get_circle
+from app.db.requests import (
+    decide_manual_circle,
+    get_circle,
+    get_user,
+    set_user_banned,
+)
 from app.hid import HIDError, hid_to_telegram_id, telegram_id_to_hid
 from app.keyboards import (
     MODERATION_CALLBACK_PREFIX,
@@ -22,6 +31,7 @@ from app.services import (
     ModerationAction,
     clear_review_marker,
     is_admin_hid,
+    is_manual_resubmission_limit_reached,
     parse_moderation_callback,
 )
 
@@ -73,6 +83,38 @@ async def _notify_participant(bot: Bot, circle: Circle, text: str) -> None:
             circle.owner_hid,
             circle.id,
         )
+
+
+async def _notify_manual_rejection(
+    bot: Bot,
+    session: AsyncSession,
+    circle: Circle,
+    reason: RejectionReason,
+) -> None:
+    user = await get_user(session, circle.owner_hid)
+    if user is not None and user.is_banned:
+        return
+
+    if user is not None and is_manual_resubmission_limit_reached(user):
+        await set_user_banned(session, user)
+        logger.info(
+            "Participant banned after repeated manual rejection: hid=%s "
+            "cir_id=%s",
+            user.hid,
+            circle.id,
+        )
+        await _notify_participant(
+            bot,
+            circle,
+            format_ban_manual_limit(reason=reason),
+        )
+        return
+
+    await _notify_participant(
+        bot,
+        circle,
+        format_manual_rejected(reason=reason),
+    )
 
 
 async def _show_rejection_reasons(
@@ -165,11 +207,7 @@ async def handle_moderation_callback(
     if reason is None:
         return
 
-    await _notify_participant(
-        bot,
-        circle,
-        format_manual_rejected(reason=reason),
-    )
+    await _notify_manual_rejection(bot, session, circle, reason)
     logger.info(
         "Manual moderation rejected: cir_id=%s owner_hid=%s admin_hid=%s "
         "reason=%s",

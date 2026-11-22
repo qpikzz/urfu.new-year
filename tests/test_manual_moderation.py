@@ -10,8 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Config
 from app.content import texts
 from app.db.enums import CircleStatus, RejectedBy, RejectionReason
-from app.db.models import Circle
-from app.db.requests import create_circle, create_user, mark_user_registered
+from app.db.models import Circle, User
+from app.db.requests import (
+    create_circle,
+    create_user,
+    get_user,
+)
 from app.handlers import moderation
 from app.hid import HIDError
 from app.keyboards import (
@@ -21,8 +25,10 @@ from app.keyboards import (
     rejection_callback_data,
 )
 from app.services import (
+    MANUAL_RESUBMISSIONS_LIMIT,
     ModerationAction,
     is_circle_sent_for_review,
+    is_manual_resubmission_limit_reached,
     parse_moderation_callback,
     run_manual_moderation_worker,
     send_circle_for_review,
@@ -77,6 +83,20 @@ def fake_hid(monkeypatch: pytest.MonkeyPatch) -> None:
         "hid_to_telegram_id",
         lambda hid: int(hid.removeprefix("hid-")),
     )
+
+
+@pytest.mark.parametrize(
+    ("used", "expected"),
+    [
+        (0, False),
+        (MANUAL_RESUBMISSIONS_LIMIT, True),
+        (MANUAL_RESUBMISSIONS_LIMIT + 1, True),
+    ],
+)
+def test_manual_resubmission_limit(used: int, expected: bool) -> None:
+    user = User(hid="hid-1", full_name="Test", resubmissions_used=used)
+
+    assert is_manual_resubmission_limit_reached(user) is expected
 
 
 def make_admin_callback(
@@ -503,3 +523,127 @@ async def test_notification_failure_does_not_cancel_decision(
 
     assert circle.status == CircleStatus.APPROVED
     bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_first_manual_rejection_warns_about_single_resubmission(
+    session: AsyncSession,
+    bot,
+    make_callback,
+    make_message,
+) -> None:
+    circle = await make_circle(session)
+    user = await get_user(session, OWNER_HID)
+    callback = make_admin_callback(
+        make_callback,
+        make_message,
+        data=rejection_callback_data(circle.id, RejectionReason.OTHER),
+    )
+
+    await moderation.handle_moderation_callback(
+        callback,
+        bot=bot,
+        session=session,
+        config=make_config(),
+    )
+
+    assert user is not None
+    assert user.is_banned is False
+    bot.send_message.assert_awaited_once_with(
+        chat_id=2002,
+        text=texts.format_manual_rejected(reason=RejectionReason.OTHER),
+    )
+
+
+@pytest.mark.asyncio
+async def test_second_manual_rejection_bans_participant(
+    session: AsyncSession,
+    bot,
+    make_callback,
+    make_message,
+) -> None:
+    circle = await make_circle(session)
+    user = await get_user(session, OWNER_HID)
+    assert user is not None
+    user.resubmissions_used = MANUAL_RESUBMISSIONS_LIMIT
+    await session.flush()
+    callback = make_admin_callback(
+        make_callback,
+        make_message,
+        data=rejection_callback_data(circle.id, RejectionReason.ADVERTISING),
+    )
+
+    await moderation.handle_moderation_callback(
+        callback,
+        bot=bot,
+        session=session,
+        config=make_config(),
+    )
+
+    assert circle.status == CircleStatus.REJECTED
+    assert circle.rejection_reason == RejectionReason.ADVERTISING
+    assert circle.rejected_by == RejectedBy.MANUAL
+    assert user.is_banned is True
+    bot.send_message.assert_awaited_once_with(
+        chat_id=2002,
+        text=texts.format_ban_manual_limit(reason=RejectionReason.ADVERTISING),
+    )
+
+
+@pytest.mark.asyncio
+async def test_banned_participant_is_not_notified_about_rejection(
+    session: AsyncSession,
+    bot,
+    make_callback,
+    make_message,
+) -> None:
+    circle = await make_circle(session)
+    user = await get_user(session, OWNER_HID)
+    assert user is not None
+    user.is_banned = True
+    await session.flush()
+    callback = make_admin_callback(
+        make_callback,
+        make_message,
+        data=rejection_callback_data(circle.id, RejectionReason.OTHER),
+    )
+
+    await moderation.handle_moderation_callback(
+        callback,
+        bot=bot,
+        session=session,
+        config=make_config(),
+    )
+
+    assert circle.status == CircleStatus.REJECTED
+    bot.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_manual_ban_persists_when_notification_fails(
+    session: AsyncSession,
+    bot,
+    make_callback,
+    make_message,
+) -> None:
+    circle = await make_circle(session)
+    user = await get_user(session, OWNER_HID)
+    assert user is not None
+    user.resubmissions_used = MANUAL_RESUBMISSIONS_LIMIT
+    await session.flush()
+    bot.send_message.side_effect = RuntimeError("Telegram is unavailable")
+    callback = make_admin_callback(
+        make_callback,
+        make_message,
+        data=rejection_callback_data(circle.id, RejectionReason.PROFANITY),
+    )
+
+    await moderation.handle_moderation_callback(
+        callback,
+        bot=bot,
+        session=session,
+        config=make_config(),
+    )
+
+    assert circle.status == CircleStatus.REJECTED
+    assert user.is_banned is True
