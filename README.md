@@ -70,3 +70,5 @@ openspec/         # спецификации и файлы задач
 ## Changelog
 
 - 2026-11-22: README update
+
+- 2026-11-23: README update
