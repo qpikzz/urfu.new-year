@@ -15,7 +15,18 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import Config, ConfigError
-from app.handlers import circle, menu, moderation, new, start
+from app.handlers import (
+    about,
+    accept,
+    ban,
+    circle,
+    look,
+    menu,
+    moderation,
+    new,
+    reject,
+    start,
+)
 from app.middlewares import (
     AdminAccessMiddleware,
     BanMiddleware,
@@ -51,6 +62,11 @@ def create_dispatcher(
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
     dispatcher.include_router(new.router)
+    dispatcher.include_router(about.router)
+    dispatcher.include_router(accept.router)
+    dispatcher.include_router(ban.router)
+    dispatcher.include_router(look.router)
+    dispatcher.include_router(reject.router)
     dispatcher.include_router(moderation.router)
     return dispatcher
 

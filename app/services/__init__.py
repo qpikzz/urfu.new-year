@@ -7,6 +7,7 @@ from app.services.admin_access import (
     is_admin_hid,
     resolve_admin_hid,
 )
+from app.services.admin_commands import command_argument, parse_cir_id
 from app.services.captcha import (
     CAPTCHA_CORRECT_KEY,
     CAPTCHA_KIND_KEY,
@@ -116,6 +117,7 @@ __all__ = [
     "TIMEZONE_MIN",
     "admin_command_from_text",
     "build_menu_text",
+    "command_argument",
     "captcha_attempts_left",
     "challenge_from_state",
     "clear_review_marker",
@@ -135,6 +137,7 @@ __all__ = [
     "load_gigaam_config",
     "parse_institute",
     "parse_moderation_callback",
+    "parse_cir_id",
     "parse_status",
     "parse_timezone",
     "resolve_admin_hid",

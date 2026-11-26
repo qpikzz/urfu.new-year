@@ -87,6 +87,7 @@ def make_message(
         message.from_user = from_user or telegram_user
         message.chat = MagicMock()
         message.answer = AsyncMock()
+        message.answer_video_note = AsyncMock()
         message.reply = AsyncMock()
         message.edit_text = AsyncMock()
         message.edit_reply_markup = AsyncMock()

@@ -22,7 +22,18 @@ from app.db.requests import (
     set_user_status,
     set_user_timezone,
 )
-from app.handlers import circle, menu, moderation, new, start
+from app.handlers import (
+    about,
+    accept,
+    ban,
+    circle,
+    look,
+    menu,
+    moderation,
+    new,
+    reject,
+    start,
+)
 from app.hid import HIDError
 from app.middlewares import (
     AdminAccessMiddleware,
@@ -520,6 +531,11 @@ def test_dispatcher_includes_routers_and_config() -> None:
     assert start.router in dispatcher.sub_routers
     assert menu.router in dispatcher.sub_routers
     assert new.router in dispatcher.sub_routers
+    assert about.router in dispatcher.sub_routers
+    assert accept.router in dispatcher.sub_routers
+    assert ban.router in dispatcher.sub_routers
+    assert look.router in dispatcher.sub_routers
+    assert reject.router in dispatcher.sub_routers
     assert moderation.router in dispatcher.sub_routers
     assert dispatcher.sub_routers.index(circle.router) < dispatcher.sub_routers.index(
         start.router
