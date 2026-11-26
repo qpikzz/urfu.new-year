@@ -26,6 +26,7 @@ from app.handlers import (
     new,
     reject,
     start,
+    stats,
 )
 from app.middlewares import (
     AdminAccessMiddleware,
@@ -67,6 +68,7 @@ def create_dispatcher(
     dispatcher.include_router(ban.router)
     dispatcher.include_router(look.router)
     dispatcher.include_router(reject.router)
+    dispatcher.include_router(stats.router)
     dispatcher.include_router(moderation.router)
     return dispatcher
 

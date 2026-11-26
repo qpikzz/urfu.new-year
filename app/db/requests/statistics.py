@@ -82,7 +82,10 @@ async def get_statistics(
         session,
         select(func.count())
         .select_from(Circle)
-        .where(Circle.status == CircleStatus.APPROVED),
+        .where(
+            Circle.status == CircleStatus.APPROVED,
+            Circle.is_buffered.is_(False),
+        ),
     )
     rejected_manual = await _count(
         session,

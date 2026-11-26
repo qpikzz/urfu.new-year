@@ -320,6 +320,6 @@ async def test_statistics_use_yekaterinburg_day_and_spec_filters(
     assert stats.registered_users == 1
     assert stats.circles_total == 4
     assert stats.circles_today == 2
-    assert stats.approved == 2
+    assert stats.approved == 1
     assert stats.rejected_manual == 1
     assert stats.rejected_auto == 1

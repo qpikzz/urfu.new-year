@@ -33,6 +33,7 @@ from app.handlers import (
     new,
     reject,
     start,
+    stats,
 )
 from app.hid import HIDError
 from app.middlewares import (
@@ -536,6 +537,7 @@ def test_dispatcher_includes_routers_and_config() -> None:
     assert ban.router in dispatcher.sub_routers
     assert look.router in dispatcher.sub_routers
     assert reject.router in dispatcher.sub_routers
+    assert stats.router in dispatcher.sub_routers
     assert moderation.router in dispatcher.sub_routers
     assert dispatcher.sub_routers.index(circle.router) < dispatcher.sub_routers.index(
         start.router
