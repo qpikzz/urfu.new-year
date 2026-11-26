@@ -19,6 +19,7 @@ from app.db.requests import (
     create_mailing,
     create_user,
     finish_mailing,
+    get_all_users,
     get_circle,
     get_next_pending_circle,
     get_setting,
@@ -56,6 +57,17 @@ class FakeMailingSession:
 
 async def test_get_user_returns_none_for_unknown_hid(session: AsyncSession) -> None:
     assert await get_user(session, "missing") is None
+
+
+async def test_get_all_users_returns_every_row_ordered_by_hid(
+    session: AsyncSession,
+) -> None:
+    await create_user(session, hid="hid-2", full_name="Second")
+    await create_user(session, hid="hid-1", full_name="First")
+
+    users = await get_all_users(session)
+
+    assert [user.hid for user in users] == ["hid-1", "hid-2"]
 
 
 async def test_create_user_applies_defaults(session: AsyncSession) -> None:

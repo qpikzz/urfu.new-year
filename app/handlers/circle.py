@@ -10,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import Config
 from app.content.texts import (
     CIRCLE_DURATION_INVALID,
     CIRCLE_IN_PROGRESS,
@@ -29,8 +30,10 @@ from app.db.requests import (
 from app.hid import HIDError, telegram_id_to_hid
 from app.services import (
     AWAITING_NEW_CIRCLE_KEY,
+    intake_closed_message,
     is_awaiting_new_circle,
     is_circle_in_progress,
+    is_intake_closed,
     is_registration_complete,
     is_valid_circle_duration,
     was_manually_rejected,
@@ -118,9 +121,16 @@ async def handle_video_note(
     message: Message,
     session: AsyncSession,
     state: FSMContext | None = None,
+    config: Config | None = None,
 ) -> None:
     user = await _get_participant(message, session)
     if user is None or not is_registration_complete(user):
+        return
+
+    if await is_intake_closed(session, config):
+        await _clear_new_circle_request(state)
+        await message.answer(intake_closed_message(config))
+        logger.info("Circle declined, intake closed: hid=%s", user.hid)
         return
 
     video_note = message.video_note

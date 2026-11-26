@@ -20,11 +20,13 @@ from app.handlers import (
     accept,
     ban,
     circle,
+    close,
     look,
     menu,
     moderation,
     new,
     reject,
+    send,
     start,
     stats,
 )
@@ -33,7 +35,11 @@ from app.middlewares import (
     BanMiddleware,
     DatabaseMiddleware,
 )
-from app.services import run_manual_moderation_worker
+from app.services import (
+    notify_environment_closure,
+    run_manual_moderation_worker,
+    run_resource_monitor,
+)
 
 
 def create_engine(database_url: str) -> AsyncEngine:
@@ -59,6 +65,7 @@ def create_dispatcher(
     dispatcher.message.middleware(admin_access_middleware)
     dispatcher.callback_query.middleware(database_middleware)
     dispatcher.callback_query.middleware(ban_middleware)
+    dispatcher.include_router(send.router)
     dispatcher.include_router(circle.router)
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
@@ -69,6 +76,7 @@ def create_dispatcher(
     dispatcher.include_router(look.router)
     dispatcher.include_router(reject.router)
     dispatcher.include_router(stats.router)
+    dispatcher.include_router(close.router)
     dispatcher.include_router(moderation.router)
     return dispatcher
 
@@ -81,6 +89,10 @@ async def run_bot(config: Config) -> None:
     session_factory = create_session_factory(engine)
     dispatcher = create_dispatcher(session_factory, config)
     bot = Bot(token=config.bot_token)
+    await notify_environment_closure(bot, config)
+    resource_monitor = asyncio.create_task(
+        run_resource_monitor(session_factory, bot, config)
+    )
     moderation_worker: asyncio.Task[None] | None = None
     if config.admin_chat_id is not None:
         moderation_worker = asyncio.create_task(
@@ -89,10 +101,12 @@ async def run_bot(config: Config) -> None:
     try:
         await dispatcher.start_polling(bot)
     finally:
-        if moderation_worker is not None:
-            moderation_worker.cancel()
+        for task in (resource_monitor, moderation_worker):
+            if task is None:
+                continue
+            task.cancel()
             with suppress(asyncio.CancelledError):
-                await moderation_worker
+                await task
         await bot.session.close()
         await engine.dispose()
 

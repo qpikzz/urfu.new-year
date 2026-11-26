@@ -17,7 +17,9 @@ from app.handlers.start import send_registration_step
 from app.hid import HIDError, telegram_id_to_hid
 from app.services import (
     AWAITING_NEW_CIRCLE_KEY,
+    intake_closed_message,
     is_circle_in_progress,
+    is_intake_closed,
     is_registration_complete,
     resume_registration,
 )
@@ -57,6 +59,12 @@ async def handle_new(
             user.hid,
             step.value,
         )
+        return
+
+    if await is_intake_closed(session, config):
+        await state.update_data({AWAITING_NEW_CIRCLE_KEY: False})
+        await message.answer(intake_closed_message(config))
+        logger.info("New command declined, intake closed: hid=%s", user.hid)
         return
 
     circle = (

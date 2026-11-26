@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 from collections.abc import Mapping
@@ -63,6 +64,23 @@ def _parse_list(values: Mapping[str, str], name: str) -> tuple[str, ...]:
     return tuple(item for item in _LIST_SEPARATOR.split(value) if item)
 
 
+def _parse_positive_float(
+    values: Mapping[str, str],
+    name: str,
+    default: float,
+) -> float:
+    value = _clean(values.get(name))
+    if value is None:
+        return default
+    try:
+        number = float(value)
+    except ValueError as exc:
+        raise ConfigError(f"{name} must be a number") from exc
+    if not math.isfinite(number) or number <= 0:
+        raise ConfigError(f"{name} must be a positive number")
+    return number
+
+
 def _parse_crypt_keys(values: Mapping[str, str]) -> tuple[str, ...]:
     value = _optional(values, "CRYPT_KEY")
     if value is None:
@@ -113,6 +131,8 @@ class Config:
     channel_url: str | None = field(default=None, repr=False)
     institutes: tuple[str, ...] = ()
     intake_closed: bool = False
+    resource_monitor_interval: float = 60.0
+    resource_monitor_disk_path: str = "/"
     database_url: str | None = field(default=None, repr=False)
     groq_api_key: str | None = field(default=None, repr=False)
     crypt_keys: tuple[str, ...] = field(default=(), repr=False)
@@ -135,6 +155,14 @@ class Config:
             channel_url=_optional(values, "CHANNEL_URL"),
             institutes=_parse_list(values, "INSTITUTES"),
             intake_closed=_parse_bool(values, "INTAKE_CLOSED"),
+            resource_monitor_interval=_parse_positive_float(
+                values,
+                "RESOURCE_MONITOR_INTERVAL_SECONDS",
+                60.0,
+            ),
+            resource_monitor_disk_path=(
+                _optional(values, "RESOURCE_MONITOR_DISK_PATH") or "/"
+            ),
             database_url=_optional(values, "DATABASE_URL"),
             groq_api_key=_optional(values, "GROQ_API_KEY"),
             crypt_keys=_parse_crypt_keys(values),

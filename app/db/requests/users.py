@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import utc_now
@@ -18,6 +19,11 @@ async def _flush(session: AsyncSession, user: User) -> User:
 
 async def get_user(session: AsyncSession, hid: str) -> User | None:
     return await session.get(User, hid)
+
+
+async def get_all_users(session: AsyncSession) -> list[User]:
+    query = select(User).order_by(User.hid)
+    return list((await session.scalars(query)).all())
 
 
 async def create_user(

@@ -27,11 +27,13 @@ from app.handlers import (
     accept,
     ban,
     circle,
+    close,
     look,
     menu,
     moderation,
     new,
     reject,
+    send,
     start,
     stats,
 )
@@ -529,6 +531,7 @@ def test_dispatcher_includes_routers_and_config() -> None:
     )
 
     assert circle.router in dispatcher.sub_routers
+    assert send.router in dispatcher.sub_routers
     assert start.router in dispatcher.sub_routers
     assert menu.router in dispatcher.sub_routers
     assert new.router in dispatcher.sub_routers
@@ -538,7 +541,11 @@ def test_dispatcher_includes_routers_and_config() -> None:
     assert look.router in dispatcher.sub_routers
     assert reject.router in dispatcher.sub_routers
     assert stats.router in dispatcher.sub_routers
+    assert close.router in dispatcher.sub_routers
     assert moderation.router in dispatcher.sub_routers
+    assert dispatcher.sub_routers.index(send.router) < dispatcher.sub_routers.index(
+        circle.router
+    )
     assert dispatcher.sub_routers.index(circle.router) < dispatcher.sub_routers.index(
         start.router
     )

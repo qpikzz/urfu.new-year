@@ -64,6 +64,8 @@ from app.services import (
     challenge_from_state,
     create_captcha_challenge,
     institute_options,
+    intake_closed_message,
+    is_intake_closed,
     is_registration_complete,
     parse_institute,
     parse_status,
@@ -150,9 +152,16 @@ async def _send_timezone_question(message: Message) -> None:
     await message.answer(TIMEZONE_QUESTION)
 
 
-async def _send_registration_complete(message: Message) -> None:
+async def _send_registration_complete(
+    message: Message,
+    session: AsyncSession,
+    config: Config | None,
+) -> None:
     await message.answer(REGISTRATION_DONE)
-    await message.answer(CIRCLE_ASK)
+    if await is_intake_closed(session, config):
+        await message.answer(intake_closed_message(config))
+    else:
+        await message.answer(CIRCLE_ASK)
 
 
 async def send_registration_step(
@@ -462,6 +471,7 @@ async def handle_timezone_input(
     message: Message,
     state: FSMContext,
     session: AsyncSession,
+    config: Config | None = None,
 ) -> None:
     telegram_user = message.from_user
     if telegram_user is None:
@@ -498,5 +508,5 @@ async def handle_timezone_input(
     await state.update_data(
         {REGISTRATION_STEP_KEY: RegistrationStep.COMPLETE.value}
     )
-    await _send_registration_complete(message)
+    await _send_registration_complete(message, session, config)
     logger.info("Profile complete: hid=%s", user.hid)

@@ -28,6 +28,8 @@ ENV_NAMES = (
     "CHANNEL_URL",
     "INSTITUTES",
     "INTAKE_CLOSED",
+    "RESOURCE_MONITOR_INTERVAL_SECONDS",
+    "RESOURCE_MONITOR_DISK_PATH",
     "DATABASE_URL",
     "GROQ_API_KEY",
     "CRYPT_KEY",
@@ -49,6 +51,8 @@ def full_environment() -> dict[str, str]:
         "CHANNEL_URL": "https://t.me/example",
         "INSTITUTES": "ИРИТ-РТФ, ИнЭУ\nГУК",
         "INTAKE_CLOSED": "true",
+        "RESOURCE_MONITOR_INTERVAL_SECONDS": "30",
+        "RESOURCE_MONITOR_DISK_PATH": "/var/lib/postgresql",
         "DATABASE_URL": FAKE_DATABASE_URL,
         "GROQ_API_KEY": FAKE_GROQ_KEY,
         "CRYPT_KEY": FAKE_CRYPT_KEYS,
@@ -76,6 +80,8 @@ def test_config_parses_full_environment() -> None:
     assert config.channel_url == "https://t.me/example"
     assert config.institutes == ("ИРИТ-РТФ", "ИнЭУ", "ГУК")
     assert config.intake_closed is True
+    assert config.resource_monitor_interval == 30.0
+    assert config.resource_monitor_disk_path == "/var/lib/postgresql"
     assert config.database_url == FAKE_DATABASE_URL
     assert config.groq_api_key == FAKE_GROQ_KEY
     assert config.crypt_keys == ("0123456789", "abcdefghij")
@@ -96,6 +102,8 @@ def test_config_uses_safe_defaults_for_optional_values() -> None:
     assert config.channel_url is None
     assert config.institutes == ()
     assert config.intake_closed is False
+    assert config.resource_monitor_interval == 60.0
+    assert config.resource_monitor_disk_path == "/"
     assert config.database_url is None
     assert config.groq_api_key is None
     assert config.crypt_keys == ()
@@ -127,6 +135,11 @@ def test_config_rejects_invalid_bot_token(values: dict[str, str]) -> None:
         {"BOT_TOKEN": FAKE_TOKEN, "ADMIN_CHAT_ID": "chat"},
         {"BOT_TOKEN": FAKE_TOKEN, "INTAKE_CLOSED": "maybe"},
         {"BOT_TOKEN": FAKE_TOKEN, "SPEECH_ENGINE": "whisper"},
+        {"BOT_TOKEN": FAKE_TOKEN, "RESOURCE_MONITOR_INTERVAL_SECONDS": "0"},
+        {"BOT_TOKEN": FAKE_TOKEN, "RESOURCE_MONITOR_INTERVAL_SECONDS": "-1"},
+        {"BOT_TOKEN": FAKE_TOKEN, "RESOURCE_MONITOR_INTERVAL_SECONDS": "soon"},
+        {"BOT_TOKEN": FAKE_TOKEN, "RESOURCE_MONITOR_INTERVAL_SECONDS": "nan"},
+        {"BOT_TOKEN": FAKE_TOKEN, "RESOURCE_MONITOR_INTERVAL_SECONDS": "inf"},
     ],
 )
 def test_config_rejects_invalid_values(values: dict[str, str]) -> None:

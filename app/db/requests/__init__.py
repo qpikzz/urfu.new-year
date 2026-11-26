@@ -24,6 +24,7 @@ from app.db.requests.settings import (
 from app.db.requests.statistics import Statistics, get_statistics
 from app.db.requests.users import (
     create_user,
+    get_all_users,
     get_user,
     mark_user_registered,
     set_greeting_received,
@@ -47,6 +48,7 @@ __all__ = [
     "finish_mailing",
     "get_circle",
     "get_circles_pending_manual",
+    "get_all_users",
     "get_next_pending_circle",
     "get_setting",
     "get_statistics",
