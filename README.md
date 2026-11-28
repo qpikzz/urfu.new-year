@@ -80,3 +80,5 @@ openspec/         # спецификации и файлы задач
 - 2026-11-26: README update
 
 - 2026-11-27: README update
+
+- 2026-11-28: README update
